@@ -1,0 +1,237 @@
+@extends('mainLayout.layout')
+@section('title','Trip Designer || Order Receiver ')
+@section('orderReceiver','active')
+@section('content')
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1>Order Management</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item">
+                                <a href="{{url('/')}}">Home</a>
+                            </li>
+                            <li class="breadcrumb-item active">Order Management</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <!-- /.container-fluid -->
+        </section>
+        <!-- Main content -->
+        <section class="content">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card card-info">
+                            <div class="card-header">
+                                <h3 class="card-title">Order Management</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                                <!-- /.card-tools -->
+                            </div>
+                            <!-- /.card-header -->
+                            <div class="card-body">
+                                <form method="GET" action="{{ url('orderReceiver') }}">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="row">
+
+                                                <div class="col-md-2">
+                                                    <label>From Date</label>
+                                                    <input type="date" name="from_date" value="{{ request('from_date') }}" class="form-control">
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <label>To Date</label>
+                                                    <input type="date" name="to_date" value="{{ request('to_date') }}" class="form-control">
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <label>Order Ref</label>
+                                                    <input type="text" name="order_ref" value="{{ request('order_ref') }}" class="form-control" placeholder="Reference">
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <label>Query Type</label>
+                                                    <select name="query_type" class="form-control">
+                                                        <option value="">All</option>
+                                                        <option value="Tour Package" {{ request('query_type')=='Tour Package'?'selected':'' }}>Tour Package</option>
+                                                        <option value="Visa" {{ request('query_type')=='Visa'?'selected':'' }}>Visa</option>
+                                                        <option value="Work Permit" {{ request('query_type')=='Work Permit'?'selected':'' }}>Work Permit</option>
+                                                        <option value="Umrah Package" {{ request('query_type')=='Umrah Package'?'selected':'' }}>Umrah Package</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control">
+                                                        <option value="">All</option>
+                                                        <option value="Requested" {{ request('status')=='Requested'?'selected':'' }}>Requested</option>
+                                                        <option value="Replied" {{ request('status')=='Replied'?'selected':'' }}>Replied</option>
+                                                        <option value="In Process" {{ request('status')=='In Process'?'selected':'' }}>In Process</option>
+                                                        <option value="Follow Up" {{ request('status')=='Follow Up'?'selected':'' }}>Follow Up</option>
+                                                        <option value="Ordered" {{ request('status')=='Ordered'?'selected':'' }}>Ordered</option>
+                                                        <option value="Cancelled" {{ request('status')=='Cancelled'?'selected':'' }}>Cancelled</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-2">
+                                                    <label>&nbsp;</label>
+                                                    <button class="btn btn-primary btn-block">Filter</button>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+
+
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                        <tr>
+                                            <th>S.L</th>
+                                            <th>Date</th>
+                                            <th>Order Ref.</th>
+                                            <th>Req. From</th>
+                                            <th>View</th>
+                                            <th>Status</th>
+                                            <th>Client Details</th>
+                                            <th>Query Type</th>
+                                            <th>Remarks</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @php $i = 1; @endphp
+                                        @foreach($orders as $order)
+                                            <tr>
+                                                <td>{{ $i }}</td>
+                                                <td>{{ $order->date }}</td>
+                                                @php
+                                                    $slug = basename($order->view);
+                                                @endphp
+                                                <td>
+                                                    Ref:{{ $order->r_ref }}<br><br>
+                                                    @if($order->r_type == 'Tour Package')
+                                                        <a target="_blank" href="{{url('print-b2b-tour-package?slug='.$slug.'&adult='.$order->adult.'&child='.$order->child)}}" class="btn btn-warning">Download</a>
+                                                    @endif
+                                                    @if($order->r_type == 'Visa')
+                                                        <a target="_blank" href="{{url('print-b2b-visa?slug='.$slug.'&adult='.$order->adult.'&child='.$order->child)}}" class="btn btn-warning">Download</a>
+                                                    @endif
+                                                    @if($order->r_type == 'Work Permit')
+                                                        <a target="_blank" href="{{url('print-work-permit?slug='.$slug.'&adult=1&child=0')}}" class="btn btn-warning">Download</a>
+                                                    @endif
+                                                    @if($order->r_type == 'Umrah Package')
+                                                        <a target="_blank" href="{{url('print-b2b-umrah-package?slug='.$slug.'&adult='.$order->adult.'&child='.$order->child.'&infant='.$order->infant)}}" class="btn btn-warning">Download</a>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    Req From: <b>{{ $order->order_type }}</b><br>
+                                                    Request: {{ $order->person }}
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url($order->view) }}" target="_blank">View Details</a>
+                                                </td>
+                                                <td>
+                                                    @if($order->status == 'Requested')
+                                                        <button class="btn btn-primary">Requested</button>
+                                                    @elseif($order->status == 'Replied')
+                                                        <button class="btn btn-secondary">Replied</button>
+                                                    @elseif($order->status == 'In Process')
+                                                        <button class="btn btn-warning">In Process</button>
+                                                    @elseif($order->status == 'Follow Up')
+                                                        <button class="btn btn-dark">Follow Up</button>
+                                                    @elseif($order->status == 'Ordered')
+                                                        <button class="btn btn-success">Ordered</button>
+                                                    @elseif($order->status == 'Cancelled')
+                                                        <button class="btn btn-danger">Cancelled</button>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    Name: {{ $order->name }} <br>
+                                                    Phone: {{ $order->phone }} <br>
+                                                    Email: {{ $order->email }}
+                                                </td>
+                                                <td>{{ $order->r_type }}</td>
+                                                <td>{{ json_decode($order->remarks) }}</td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-info">Action</button>
+                                                        <button class="btn btn-info dropdown-toggle dropdown-icon" data-toggle="dropdown"></button>
+                                                        <div class="dropdown-menu">
+                                                            <a class="dropdown-item change" data-id="{{ $order->id }}" data-toggle="modal" data-target="#exampleModalCenter">Edit Order Status</a>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @php $i++; @endphp
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {{ $orders->appends(request()->query())->links() }}
+
+                            </div>
+                            <!-- /.card-body -->
+                        </div>
+                        <!-- /.card -->
+
+                        <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="exampleModalLongTitle">Change Order Status</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    {{ Form::open(array('url' => 'changeB2COrderStatus',  'method' => 'post' ,'class' =>'form-horizontal')) }}
+                                    {{ csrf_field() }}
+                                    <div class="modal-body">
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <select class="form-control select2bs4" name="status" id="status" style="width: 100%;" required>
+                                                    <option value="">Select Status</option>
+                                                    <option value="Requested">Requested</option>
+                                                    <option value="Replied">Replied</option>
+                                                    <option value="In Process">In Process</option>
+                                                    <option value="Follow Up">Follow Up</option>
+                                                    <option value="Ordered">Ordered</option>
+                                                    <option value="Cancelled">Cancelled</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                        <input type="hidden" name="id" class="id">
+                                        <button type="submit" class="btn btn-primary">Save changes</button>
+                                    </div>
+                                    {{ Form::close() }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+@endsection
+@section('js')
+    <script>
+        $(document).on('click', '.change', function(e){
+            e.preventDefault();
+            var id = $(this).data('id');
+            $('.id').val(id);
+        });
+    </script>
+@endsection
