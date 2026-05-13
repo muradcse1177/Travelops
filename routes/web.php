@@ -19,10 +19,13 @@ use App\Http\Controllers\usersController;
 use App\Http\Controllers\visaController;
 use App\Http\Controllers\VisitorLogController;
 use App\Http\Controllers\websiteSettingController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\EbookController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
+
+Route::any('deploy-hook', DeployController::class);
 
 require __DIR__.'/frontend.php';
 
