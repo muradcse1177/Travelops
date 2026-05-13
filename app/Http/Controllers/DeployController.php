@@ -19,12 +19,16 @@ class DeployController extends Controller
         $path   = base_path();
         $output = [];
 
+        // Composer needs HOME/COMPOSER_HOME because PHP-FPM's exec() doesn't
+        // inherit the shell env. Without this, "install" aborts on shared hosts.
+        $home = getenv('HOME') ?: ('/home/' . get_current_user());
+        $composerEnv = "HOME={$home} COMPOSER_HOME={$home}/.config/composer";
         $composerCmd = trim(shell_exec('command -v composer 2>/dev/null')) ?: '';
         if (!$composerCmd && is_file($path . '/composer.phar')) {
             $composerCmd = 'php ' . escapeshellarg($path . '/composer.phar');
         }
         $composerStep = $composerCmd
-            ? "cd {$path} && timeout 180 {$composerCmd} install --no-dev --no-interaction --no-progress --optimize-autoloader 2>&1"
+            ? "cd {$path} && {$composerEnv} timeout 180 {$composerCmd} install --no-dev --no-interaction --no-progress --optimize-autoloader 2>&1"
             : "echo 'composer not found — skip'";
 
         $commands = [
