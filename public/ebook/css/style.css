@@ -1,0 +1,817 @@
+body {
+    font-family: 'Noto Sans Bengali', sans-serif;
+    background: #f4f6fc;
+    margin: 0;
+    padding: 0;
+}
+body {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
+/* =========================
+   SIDEBAR SMOOTH SCROLL
+========================= */
+#sidebar {
+    scroll-behavior: smooth;
+}
+
+/* Premium scrollbar */
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd54f, #ffb300);
+    border-radius: 10px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffca28, #ffa000);
+}
+body::-webkit-scrollbar {
+    width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+    background: #e6ebff;
+}
+
+body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd54f, #ffb300);
+    border-radius: 10px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffca28, #ffa000);
+}
+
+/* ==============================
+   GDS CODE BLOCK DESIGN
+================================ */
+
+.gds-code-wrapper {
+    background: #0b132b;
+    border-radius: 10px;
+    margin: 15px 0 25px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.gds-code-title {
+    background: #1c2541;
+    color: #ffd166;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    letter-spacing: 0.3px;
+}
+
+.gds-code {
+    margin: 0;
+    padding: 18px;
+    color: #4dfcff;
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 16px;
+    line-height: 1.6;
+    background: transparent;
+    border: none;
+    white-space: pre-wrap;
+}
+
+
+@media print {
+    body {
+        display: none !important;
+    }
+}
+/* Disable image drag */
+img {
+    pointer-events: none;
+}
+
+/* Hide selection color */
+::selection {
+    background: transparent;
+}
+
+::-moz-selection {
+    background: transparent;
+}
+/* =========================
+   WATERMARK FIX FOR CARDS
+   ========================= */
+
+/* Parent container */
+.chapter-box {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Watermark */
+.chapter-box::before {
+    content: "Trip Designer | tripdesigner.net";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 80px;
+    font-weight: 900;
+    color: rgba(4, 16, 124, 0.08);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;   /* 🔑 watermark layer */
+}
+
+/* 🔑 ALL CONTENT ABOVE WATERMARK */
+.chapter-box * {
+    position: relative;
+    z-index: 2;
+}
+
+/* 🔽 FORCE CARD BACKGROUND NOT TO BLOCK */
+.td-card,
+.highlight-box,
+.info-box,
+.study-card,
+.index-section {
+    position: relative;
+    z-index: 1 !important;
+}
+
+
+/* ---- MOBILE MENU BUTTON ---- */
+#mobileMenuBtn {
+    display: none;
+    background: #04107C;
+    color: #fff;
+    padding: 12px 15px;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+/* ---- SIDEBAR ---- */
+#sidebar {
+    width: 260px;
+    background: #04107C;
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    padding: 20px;
+    transition: 0.3s ease;
+    z-index: 999;
+}
+
+#sidebar a {
+    display: block;
+    padding: 10px;
+    color: white;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+#sidebar a:hover {
+    background: #eeb90a;
+}
+
+/* ---- CONTENT ---- */
+#content {
+    margin-left: 270px;
+    padding: 30px;
+}
+
+.chapter-box {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* HEADER */
+.main-header {
+    background: #04107C;
+    padding: 40px;
+    border-radius: 10px;
+    color: white;
+}
+
+/* FOOTER */
+.footer-box {
+    margin-top: 40px;
+    background: #eaf0ff;
+    padding: 20px;
+    border-left: 5px solid #04107C;
+}
+.index-wrapper {
+    margin-top: 25px;
+}
+
+.index-section {
+    background: #f7f8ff;
+    padding: 22px;
+    border-radius: 10px;
+    margin-bottom: 22px;
+    border-left: 6px solid #04107C;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+.index-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #04107C;
+    margin-bottom: 12px;
+}
+
+.index-item {
+    padding: 10px 15px;
+    background: #ffffff;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 16px;
+    transition: 0.25s;
+    border-left: 4px solid #04107C;
+}
+
+.index-item:hover {
+    background: #e7ecff;
+    transform: translateX(4px);
+}
+.chapter-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: #04107C;
+}
+
+.section-heading {
+    font-size: 22px;
+    font-weight: 700;
+    color: #04107C;
+    margin-top: 20px;
+}
+
+.sub-heading {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 15px;
+    color: #2035C2;
+}
+
+.highlight-box {
+    background: #eaf0ff;
+    padding: 15px;
+    border-left: 5px solid #04107C;
+    margin: 15px 0;
+    border-radius: 6px;
+}
+
+.info-box {
+    background: #fff7d1;
+    padding: 15px;
+    border-left: 5px solid #f2c200;
+    margin: 15px 0;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.nav-buttons {
+    margin-top: 30px;
+    display: flex;
+    justify-content: space-between;
+}
+.child a {
+    background: rgba(255,255,255,0.12);
+}
+
+.child a:hover {
+    background: rgba(255,255,255,0.25);
+}
+.index-item {
+    cursor: pointer;
+    transition: 0.25s;
+}
+.index-item:hover {
+    background: #e5ecff;
+    transform: translateX(6px);
+}
+.index-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.index-title::before {
+    content: "📌";
+    font-size: 20px;
+}
+/* Remove dot/bullet from visa list */
+.visa-list {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+}
+
+.visa-list li {
+    padding-left: 0;
+    margin-left: 0;
+}
+/* Trip Designer Premium Support Card */
+.td-card {
+    background: #ffffff;
+    border-radius: 15px;
+    border: 1px solid #d9e2ff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    overflow: hidden;
+    margin: 20px 0 30px 0;
+}
+
+.td-card-body {
+    padding: 20px 22px;
+    background: #f4f7ff;
+    border-left: 6px solid #04107C;
+}
+
+.td-text {
+    font-size: 16px;
+    line-height: 26px;
+    color: #04107C;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Footer Contact Section */
+.td-card-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 15px 18px;
+    background: #eaf0ff;
+    border-top: 1px solid #d5ddff;
+}
+
+.td-contact-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border-left: 4px solid #2035c2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    flex: 1;
+}
+
+.cta-icon {
+    font-size: 22px;
+}
+
+.cta-label {
+    font-size: 14px;
+    color: #04107C;
+    font-weight: 700;
+}
+
+.td-contact-box a {
+    color: #2035C2;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.td-contact-box a:hover {
+    text-decoration: underline;
+}
+/* Study Abroad Support Card */
+/* Study Abroad Support Card */
+.study-card {
+    background: #ffffff;
+    border-left: 6px solid #04107C;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-top: 30px;
+}
+
+.study-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #04107C;
+    margin-bottom: 12px;
+}
+
+.study-text {
+    font-size: 16px;
+    margin-bottom: 18px;
+    color: #333;
+}
+
+/* Updated Tag Style Instead of Flags */
+.study-country-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.country-tag {
+    background: #e8edff;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 14px;
+    border: 1px solid #cdd6ff;
+    color: #04107C;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.study-btn {
+    display: inline-block;
+    background: #04107C;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 8px;
+    font-size: 16px;
+    text-decoration: none;
+    margin-top: 18px;
+    transition: 0.3s;
+}
+
+.study-btn:hover {
+    background: #0620b8;
+}
+.custom-checklist li {
+    margin-bottom: 8px;
+    font-size: 16px;
+    list-style: none;
+}
+.country-tag a {
+    display: inline-block;
+    margin-top: 6px;
+    color: #2035C2;
+    font-weight: 600;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.country-tag a:hover {
+    text-decoration: underline;
+}
+/* =========================
+   Trip Designer Modal Design
+   ========================= */
+
+.td-modal {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.td-modal-header {
+    background: linear-gradient(135deg, #04107C, #2035C2);
+    color: #fff;
+}
+
+.td-modal-header h5 {
+    font-weight: 800;
+    margin: 0;
+}
+
+.td-modal-header small {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.td-modal-sub {
+    font-size: 15px;
+    color: #444;
+    margin-bottom: 18px;
+}
+
+/* White close (X) button */
+.td-modal .btn-close {
+    filter: invert(1);
+    opacity: 1;
+}
+
+.td-modal .btn-close:hover {
+    opacity: 0.8;
+}
+
+/* Service cards */
+.td-service-item {
+    display: block;
+    background: #f4f7ff;
+    border-left: 5px solid #04107C;
+
+    /* 🔽 height control */
+    padding: 10px 14px;          /* আগে ছিল 15px 16px */
+    line-height: 1.3;            /* compact text */
+
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;             /* text একটু ছোট */
+    color: #04107C;
+    text-decoration: none;
+    transition: 0.25s;
+}
+
+
+.td-service-item:hover {
+    background: #e6ecff;
+    transform: translateX(4px);
+}
+
+.td-modal-footer {
+    background: #f7f9ff;
+}
+/* ACTIVE CHILD COLOR FIX */
+#sidebar .child a.active-link {
+    background: #eeb90a !important;
+    color: #04107C !important;   /* text readable রাখার জন্য */
+    font-weight: 800;
+}
+
+/* Hover করলে যেন active color change না হয় */
+#sidebar .child a.active-link:hover {
+    background: #eeb90a !important;
+    color: #04107C !important;
+}
+/* Active CHILD */
+#sidebar .child a.active-link {
+    background: #01cdf1 !important;
+    color: #04107C !important;
+    font-weight: 800;
+}
+
+/* Active PARENT */
+#sidebar .parent.active-link {
+    background: #eeb90a !important;
+    color: #04107C !important;
+    font-weight: 800;
+}
+
+/* Hover করলে active color change হবে না */
+#sidebar .child a.active-link:hover,
+#sidebar .parent.active-link:hover {
+    background: #eeb90a !important;
+    color: #04107C !important;
+}
+#sidebar .child a {
+    position: relative;
+    padding-left: 22px;
+}
+
+/* small arrow instead of dot */
+#sidebar .child a::before {
+    content: "›";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #ffffff;
+    opacity: 0.9;
+}
+
+/* active child arrow color */
+#sidebar .child a.active-link::before {
+    color: #04107C;
+}
+/* =========================
+   EBOOK FOOTER DESIGN
+   ========================= */
+
+.ebook-footer {
+    width: 100%;
+    background: linear-gradient(135deg, #eef2ff, #f7f9ff);
+    padding: 28px 24px;
+    border-radius: 14px;
+    margin-top: 40px;
+    border-left: 6px solid #04107C;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    box-sizing: border-box;
+}
+
+.footer-info p {
+    margin: 10px 0;
+    font-size: 15px;
+    line-height: 24px;
+    color: #333;
+}
+
+.footer-info strong {
+    color: #04107C;
+    font-weight: 700;
+}
+
+.footer-info a {
+    color: #04107C;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer-info a:hover {
+    text-decoration: underline;
+}
+
+.footer-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #b7c4ff, transparent);
+    margin: 18px 0;
+}
+
+.footer-copy {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+}
+/* =========================
+   DESKTOP ONLY FIXED HEADER
+   ========================= */
+
+/* Default (Mobile & Tablet) – normal flow */
+.ebook-header {
+    position: relative;
+}
+#sidebar .child a {
+    background: #ffffff !important;
+    color: #04107C;
+}
+
+/* Hover effect (soft) */
+#sidebar .child a:hover {
+    background: #f2f5ff !important;
+}
+
+/* Active child (yellow stays same) */
+#sidebar .child a.active-link {
+    background: #03cdff !important;
+    color: #04107C !important;
+}
+.modal {
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* =========================
+   MOBILE TOP FIXED MENU BAR
+   ========================= */
+
+@media (max-width: 768px) {
+
+    /* Menu button bar */
+    #mobileMenuBtn {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 11000 !important;
+    }
+
+    /* Push everything down below menu bar */
+    body {
+        padding-top: 70px;
+    }
+    .modal {
+        z-index: 11000 !important;
+    }
+
+    .modal-dialog {
+        margin-top: 80px !important;
+    }
+
+}
+@media (min-width: 992px) {
+
+    .ebook-header {
+        position: fixed;
+        top: 0;
+        left: 260px;        /* sidebar width */
+        right: 0;
+        z-index: 999;
+        background: linear-gradient(135deg, #04107C, #2035C2);
+        padding: 32px 24px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    }
+
+    /* push content down */
+    #content {
+        margin-top: 160px;
+    }
+}
+
+
+/* =========================
+   MOBILE RESPONSIVE
+   ========================= */
+@media (max-width: 600px) {
+    .ebook-footer {
+        padding: 22px 18px;
+    }
+
+    .footer-info p {
+        font-size: 14px;
+    }
+
+    .footer-copy {
+        font-size: 12px;
+    }
+}
+
+/* Mobile Friendly */
+@media(max-width: 600px){
+    .td-card-footer {
+        flex-direction: column;
+    }
+}
+
+
+/* ---- MOBILE RESPONSIVE ---- */
+/* ============================
+   MOBILE RESPONSIVE FIXES
+   ============================ */
+@media (max-width: 768px) {
+
+    /* MOBILE MENU BUTTON */
+    #mobileMenuBtn {
+        display: block;
+        background: #04107C;
+        color: #fff;
+        padding: 14px 20px !important;
+        font-size: 22px !important;
+        cursor: pointer;
+        margin-bottom: 20px !important;   /* space between menu and header */
+        z-index: 9999;
+        position: relative;
+        border-radius: 5px;
+    }
+
+    /* SIDEBAR MOBILE */
+    #sidebar {
+        left: -260px !important;
+        height: 100%;
+        position: fixed;
+        top: 0;
+        z-index: 99999;
+    }
+
+    #sidebar.active {
+        left: 0 !important;
+    }
+
+    /* HEADER FIX */
+    .ebook-header {
+        margin-top: 5px !important;       /* prevents touching menu */
+        padding: 30px 18px !important;
+        border-radius: 12px !important;
+        text-align: center;
+    }
+
+    .ebook-header h1 {
+        font-size: 24px !important;
+        line-height: 30px !important;
+        margin-bottom: 8px !important;
+        font-weight: 800 !important;
+    }
+
+    .ebook-header p {
+        font-size: 15px !important;
+        line-height: 22px !important;
+        margin: 0 !important;
+        opacity: 0.9 !important;
+    }
+
+    /* MAIN CONTENT */
+    #content {
+        margin-left: 0 !important;
+        padding: 15px !important;
+    }
+
+    .chapter-box {
+        margin-top: 10px !important;
+        padding: 20px !important;
+    }
+
+    /* ORIGINAL HEADER STYLE (if exists) */
+    .main-header {
+        padding: 25px !important;
+    }
+
+    /* FOOTER FIX */
+    .ebook-footer {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 25px !important;
+        border-radius: 10px !important;
+    }
+}
+
