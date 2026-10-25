@@ -6,13 +6,23 @@ namespace App\Http\Controllers;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 class statemntController extends Controller
 {
+    /*
+     * City statement generator state (reset per statement): the account's
+     * own reference (interest/tax/most CT-FT rows), the running transfer
+     * reference shared by CT-FT / CT-NPSB / CT-EFTN rows, the small pools
+     * of recurring counterparties, and the RTGS sender name.
+     */
+    private ?string $taxRefAccount = null;
+    private int $ctftRef = 0;
+    private array $cityPools = [];
+    private string $rtgsName = '';
+
     public function ucbSolvency (Request $request){
         try{
             return view('bankStatement.ucbSolvency');
@@ -251,9 +261,6 @@ class statemntController extends Controller
                 );
             }
 
-            $start->startOfMonth();
-            $end->endOfMonth();
-
         } catch (\Throwable $e) {
             throw ValidationException::withMessages([
                 'periodFrom' =>
@@ -263,226 +270,156 @@ class statemntController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 2. Build month collection
+        | 2. Statement period (exactly as entered, both days inclusive)
         |--------------------------------------------------------------------------
         */
 
-        $months = collect(
-            CarbonPeriod::create($start, '1 month', $end)
-        );
+        $periodDays = (int) $start->diffInDays($end) + 1;
 
-        $monthCount = $months->count();
-
-        if ($monthCount < 1) {
-            throw ValidationException::withMessages([
-                'periodFrom' => 'The selected date range is invalid.',
-            ]);
+        // Month ends inside the period (interest / tax are posted on these)
+        $monthEnds = [];
+        for ($m = $start->copy()->endOfMonth()->startOfDay(); $m->lte($end); $m = $m->copy()->addDay()->endOfMonth()->startOfDay()) {
+            $monthEnds[] = $m->copy();
+        }
+        if (empty($monthEnds)) {
+            $monthEnds[] = $end->copy();
         }
 
         /*
         |--------------------------------------------------------------------------
-        | 3. Transaction configuration
+        | 3. Transaction mix (modelled on a real City Bank statement)
         |--------------------------------------------------------------------------
+        | - CT-FT: 40% of all rows, in and out
+        | - Month end: WTax + Int.Pd on the same day (WTax = 10% of the
+        |   interest), plus one more WTax on another month end (if any)
+        | - Fixed counts: 1-2 INTER BRANCH, 2 REVERSED, 1 RTGS, 4-5 CASH DEPOSIT
+        | - The rest by weight, NPSB IN the most common
+        | Short statements keep at most half their rows for the fixed ones.
         */
 
         $transactionCount = (int) $validated['transaction'];
+        $balance = (float) $validated['openingBalance'];
+        $transactions = [];
 
-        $transactionTypes = [
-            'NPSB',
-            'CTFT',
-            'BFTN',
-            'PURCHASE',
-            'ATM Withdraw',
-            'CHARGE',
-            'INTEREST',
-            'WTAX',
+        $this->startCityStatement((string) $validated['accountName']);
+
+        $typeWeights = [
+            'NPSB'         => 10,
+            'CTNPSB'       => 2,
+            'CTEFTN'       => 1,
+            'BKASH'        => 2,
+            'NAGAD'        => 1,
+            'PURCHASE'     => 2,
+            'ATM Withdraw' => 2,
+            'CHARGE'       => 1,
+            'BFTN'         => 1,
         ];
 
-        $transactions = [];
-        $balance = (float) $validated['openingBalance'];
-        $wtaxUsed = false;
-        $generatedCount = 0;
+        $depositTypes = ['NPSB', 'BFTN', 'BKASH', 'NAGAD', 'INTEREST', 'INTER BRANCH', 'REVERSED', 'CASH DEPOSIT', 'RTGS'];
+        $fallbackDeposits = ['NPSB', 'BFTN', 'BKASH', 'NAGAD'];
 
-        /*
-        |--------------------------------------------------------------------------
-        | 4. Generate sample transactions
-        |--------------------------------------------------------------------------
-        | The requested transaction count is distributed across months.
-        | Each generated transaction updates the running balance.
-        */
+        // Fixed rows in priority order; the month-end ones carry their own date
+        $interestDay = $monthEnds[array_rand($monthEnds)];
+        $otherEnds = array_values(array_filter($monthEnds, fn ($d) => !$d->eq($interestDay)));
+        $interestAmount = $this->sampleAmount('INTEREST');
 
-        $basePerMonth = intdiv($transactionCount, $monthCount);
-        $remainder = $transactionCount % $monthCount;
+        $monthEndRows = [
+            ['type' => 'WTAX', 'date' => $interestDay, 'amount' => round($interestAmount * 0.10, 2)],
+            ['type' => 'INTEREST', 'date' => $interestDay, 'amount' => $interestAmount],
+        ];
 
-        foreach ($months as $monthIndex => $month) {
-            $month = $month->copy();
-
-            $monthTransactionCount = $basePerMonth
-                + ($monthIndex < $remainder ? 1 : 0);
-
-            $interestUsed = false;
-
-            for ($i = 0; $i < $monthTransactionCount; $i++) {
-                $typePool = $transactionTypes;
-
-                if ($wtaxUsed) {
-                    $typePool = array_values(array_filter(
-                        $typePool,
-                        fn ($type) => $type !== 'WTAX'
-                    ));
-                }
-
-                if ($interestUsed) {
-                    $typePool = array_values(array_filter(
-                        $typePool,
-                        fn ($type) => $type !== 'INTEREST'
-                    ));
-                }
-
-                if (empty($typePool)) {
-                    break;
-                }
-
-                $type = $typePool[array_rand($typePool)];
-
-                if ($type === 'WTAX') {
-                    $wtaxUsed = true;
-                }
-
-                if ($type === 'INTEREST') {
-                    $interestUsed = true;
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | Amount rules
-                |--------------------------------------------------------------------------
-                */
-
-                switch ($type) {
-                    case 'PURCHASE':
-                        $amount = random_int(500, 15000);
-                        break;
-
-                    case 'ATM Withdraw':
-                        $amount = [
-                            2000,
-                            5000,
-                            10000,
-                            15000,
-                            20000,
-                            30000,
-                        ][array_rand([
-                            2000,
-                            5000,
-                            10000,
-                            15000,
-                            20000,
-                            30000,
-                        ])];
-                        break;
-
-                    case 'CHARGE':
-                    case 'INTEREST':
-                    case 'WTAX':
-                        $amount = random_int(1500, 3000);
-                        break;
-
-                    case 'CTFT':
-                        $amount = (float) (random_int(400, 3000) * 100);
-                        break;
-
-                    case 'NPSB':
-                        $amount = (float) (random_int(100, 1000) * 100);
-                        break;
-
-                    case 'BFTN':
-                        $amount = (float) (random_int(300, 2000) * 100);
-                        break;
-
-                    default:
-                        $amount = random_int(1000, 500000);
-                        break;
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | Transaction date
-                |--------------------------------------------------------------------------
-                */
-
-                $monthStart = $month->copy()->startOfMonth();
-                $monthEnd = $month->copy()->endOfMonth();
-
-                $date = Carbon::createFromTimestamp(
-                    random_int(
-                        $monthStart->timestamp,
-                        $monthEnd->timestamp
-                    )
-                )->format('d-m-Y');
-
-                /*
-                |--------------------------------------------------------------------------
-                | Deposit / withdrawal handling
-                |--------------------------------------------------------------------------
-                */
-
-                $isDeposit = in_array(
-                    $type,
-                    ['CTFT', 'NPSB', 'BFTN'],
-                    true
-                ) || $type === 'INTEREST';
-
-                if ($isDeposit) {
-                    $balance += $amount;
-
-                    $transactions[] = [
-                        'date'        => $date,
-                        'description' => $this->generateDescription($type),
-                        'withdrawal'  => null,
-                        'deposit'     => $amount,
-                        'balance'     => $balance,
-                    ];
-
-                    $generatedCount++;
-                    continue;
-                }
-
-                /*
-                * Do not allow a withdrawal to make the balance negative.
-                * If the available balance is insufficient, skip this
-                * generated transaction.
-                */
-                if ($balance < $amount) {
-                    continue;
-                }
-
-                $balance -= $amount;
-
-                $transactions[] = [
-                    'date'        => $date,
-                    'description' => $this->generateDescription($type),
-                    'withdrawal'  => $amount,
-                    'deposit'     => null,
-                    'balance'     => $balance,
-                ];
-
-                $generatedCount++;
-            }
+        // Second WTax needs another month end (one period cannot be taxed twice)
+        if ($otherEnds) {
+            $monthEndRows[] = [
+                'type'   => 'WTAX',
+                'date'   => $otherEnds[array_rand($otherEnds)],
+                'amount' => round($this->sampleAmount('INTEREST') * 0.10, 2),
+            ];
         }
 
+        $fixedRows = array_merge(
+            $monthEndRows,
+            array_fill(0, random_int(1, 2), ['type' => 'INTER BRANCH']),
+            array_fill(0, 2, ['type' => 'REVERSED']),
+            [['type' => 'RTGS']],
+            array_fill(0, random_int(4, 5), ['type' => 'CASH DEPOSIT'])
+        );
+        $fixedRows = array_slice($fixedRows, 0, intdiv($transactionCount, 2));
+
+        $datedRows = array_values(array_filter($fixedRows, fn ($row) => isset($row['date'])));
+        $floatingFixed = array_values(array_filter($fixedRows, fn ($row) => !isset($row['date'])));
+
         /*
         |--------------------------------------------------------------------------
-        | 5. Sort transactions chronologically
+        | 4. Spread the other rows' dates over the period
+        |--------------------------------------------------------------------------
+        | The period is cut into one equal slot per row and each row gets a
+        | random day inside its own slot, so the dates cover the whole range
+        | without bunching. Types go to random slots: the floating fixed rows,
+        | then the CT-FT quota, then weighted picks.
+        */
+
+        $slotCount = $transactionCount - count($datedRows);
+        $ctftCount = max(0, min($slotCount - count($floatingFixed), (int) round($transactionCount * 0.4)));
+
+        $slotTypes = array_merge(array_column($floatingFixed, 'type'), array_fill(0, $ctftCount, 'CTFT'));
+        while (count($slotTypes) < $slotCount) {
+            $slotTypes[] = $this->pickWeighted($typeWeights);
+        }
+        shuffle($slotTypes);
+
+        $rows = [];
+        for ($i = 0; $i < $slotCount; $i++) {
+            $slotStart = intdiv($i * $periodDays, $slotCount);
+            $slotEnd = max($slotStart, intdiv(($i + 1) * $periodDays, $slotCount) - 1);
+
+            $rows[] = ['type' => $slotTypes[$i], 'date' => $start->copy()->addDays(random_int($slotStart, $slotEnd)), 'seq' => $i];
+        }
+
+        // Month-end rows close their day, in the order listed (WTax before Int.Pd)
+        foreach ($datedRows as $i => $row) {
+            $rows[] = $row + ['seq' => $slotCount + $i];
+        }
+
+        usort($rows, fn ($a, $b) => [$a['date']->timestamp, $a['seq']] <=> [$b['date']->timestamp, $b['seq']]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. Build the transactions in date order (running balance)
         |--------------------------------------------------------------------------
         */
 
-        usort($transactions, function ($a, $b) {
-            $dateA = Carbon::createFromFormat('!d-m-Y', $a['date']);
-            $dateB = Carbon::createFromFormat('!d-m-Y', $b['date']);
+        foreach ($rows as $row) {
+            $type = $row['type'];
+            $date = $row['date'];
+            $amount = $row['amount'] ?? $this->sampleAmount($type);
 
-            return $dateA->timestamp <=> $dateB->timestamp;
-        });
+            // CT-FT goes both ways; the rest by type
+            $isDeposit = $type === 'CTFT' ? (bool) random_int(0, 1) : in_array($type, $depositTypes, true);
+
+            // A withdrawal must not make the balance negative
+            if (!$isDeposit && $balance < $amount) {
+                if ($type === 'CTFT') {
+                    $isDeposit = true;
+                } elseif ($type === 'WTAX' && $balance > 0) {
+                    $amount = round($balance * 0.10, 2);
+                } else {
+                    $type = $fallbackDeposits[array_rand($fallbackDeposits)];
+                    $amount = $this->sampleAmount($type);
+                    $isDeposit = true;
+                }
+            }
+
+            $balance += $isDeposit ? $amount : -$amount;
+
+            $transactions[] = [
+                'date'        => $date->format('d-m-Y'),
+                'description' => $this->generateDescription($type, $date),
+                'withdrawal'  => $isDeposit ? null : $amount,
+                'deposit'     => $isDeposit ? $amount : null,
+                'balance'     => $balance,
+            ];
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -504,18 +441,35 @@ class statemntController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+        /*
+         * Physical statement: the whole design is scaled down uniformly (same
+         * ratio, centred) so every page keeps 100px blank below the footer.
+         * The original layout ends 5mm above the bottom edge (footer bottom at
+         * 292mm from the top); scaled from the top edge it must end at
+         * 297mm - 100px. A higher DPI shrinks every px size by that factor.
+         */
+        $pdfScale = 1;
+        // Left/right margins are then trimmed by this many px (content widens)
+        $pdfSideTrim = 0;
+        if ($view === 'bankStatement.cityPhysicalPDF') {
+            $pdfScale = (297 - 100 * 25.4 / 96) / 292;
+            $pdfSideTrim = 10;
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOption('dpi', 96 / $pdfScale)->loadView($view, [
             'info'         => $validated,
             'transactions' => $transactions,
+            'pdfScale'     => $pdfScale,
+            'pdfSideTrim'  => $pdfSideTrim,
         ])->setPaper('A4', 'portrait');
 
         // Physical statement: "Page X of Y" at the bottom-right of the shared footer
         if ($view === 'bankStatement.cityPhysicalPDF') {
             $pdf->render();
 
-            $pdf->getDomPDF()->getCanvas()->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) {
+            $pdf->getDomPDF()->getCanvas()->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($pdfScale, $pdfSideTrim) {
                 $regular = $fontMetrics->getFont('Helvetica');
-                $size    = 7.5;
+                $size    = 7.5 * $pdfScale;
                 $grey    = [0.47, 0.47, 0.47];
 
                 $parts = [
@@ -530,9 +484,12 @@ class statemntController extends Controller
                     $width += $fontMetrics->getTextWidth($text, $font, $size);
                 }
 
-                // Right edge = page width minus the 8mm side margin
-                $x = $canvas->get_width() - 22.7 - $width;
-                $y = $canvas->get_height() - 18;
+                // Original spot (8mm side margin, 18pt above the bottom),
+                // scaled with the page: horizontally about the centre, vertically from the top;
+                // then moved out with the trimmed right margin (px -> pt)
+                $pageWidth = $canvas->get_width();
+                $x = $pageWidth / 2 + ($pageWidth / 2 - 22.7) * $pdfScale + $pdfSideTrim * 0.75 - $width;
+                $y = ($canvas->get_height() - 18) * $pdfScale;
 
                 foreach ($parts as [$text, $font, $color]) {
                     $canvas->text($x, $y, $text, $font, $size, $color);
@@ -544,21 +501,199 @@ class statemntController extends Controller
         return $pdf->stream($fileName);
     }
 
-    private function generateDescription($type = null)
+    /**
+     * Random key from a [key => weight] map, chosen in proportion to its weight.
+     */
+    private function pickWeighted(array $weights)
     {
+        $roll = random_int(1, array_sum($weights));
+
+        foreach ($weights as $key => $weight) {
+            $roll -= $weight;
+
+            if ($roll <= 0) {
+                return $key;
+            }
+        }
+
+        return array_key_last($weights);
+    }
+
+    /**
+     * Reset the City statement state: own account, running transfer
+     * reference and the recurring counterparties a real account shows.
+     */
+    private function startCityStatement(string $accountName): void
+    {
+        $this->taxRefAccount = $this->randomBranchAccount();
+        $this->ctftRef = random_int(100005000000, 100015000000);
+        $this->rtgsName = strtoupper(trim($accountName)) ?: 'ACCOUNT HOLDER';
+
+        // CT-FT counterparties besides the own account
+        $ctft = [];
+        for ($i = 0; $i < 5; $i++) {
+            $ctft[] = $this->randomBranchAccount();
+        }
+
+        // ABA TO FIN accounts, e.g. 1781120015828
+        $aba = [];
+        for ($i = 0; $i < 4; $i++) {
+            $aba[] = '1781' . rand(100, 999) . '0' . sprintf('%05d', rand(0, 99999));
+        }
+
+        // NPSB IN senders: bank + account, in the mixed formats real statements show
+        $inBanks = ['PUBL', 'ABBL', 'UCBL', 'IFIC', 'ISBL', 'ONBL', 'STCB', 'BASL', 'DBBL', 'EBL'];
+        shuffle($inBanks);
+        $formats = [
+            fn () => '1' . rand(100000000000, 999999999999),                // 1398101165293
+            fn () => '2013201' . sprintf('%09d', rand(0, 999999999)),       // 2013201000007773
+            fn () => '0' . rand(1000000000, 9999999999),                   // 04433000837
+            fn () => '0' . rand(10000, 99999) . '***' . rand(1000, 9999),  // 039224***2901
+            fn () => '1111' . rand(100000000, 999999999),                  // 1111188619300
+            fn () => '0' . rand(1000000000, 9999999999),                   // 02120318001
+        ];
+        $npsbIn = [];
+        foreach (array_slice($inBanks, 0, 6) as $i => $bank) {
+            $npsbIn[] = [$bank, $formats[$i]()];
+        }
+
+        // Outgoing CT-NPSB / CT-EFTN payees
+        $outBanks = ['NRBC', 'TRUST', 'MTBL', 'DBBL', 'EBL', 'BRAC'];
+        shuffle($outBanks);
+        $npsbOut = [];
+        foreach (array_slice($outBanks, 0, 3) as $bank) {
+            $npsbOut[] = [$bank, '0' . rand(1000000000000, 9999999999999)];
+        }
+
+        $this->cityPools = compact('ctft', 'aba', 'npsbIn', 'npsbOut');
+    }
+
+    // Next value of the running transfer reference (CT-FT / CT-NPSB / CT-EFTN)
+    private function nextTransferRef(): int
+    {
+        if (!$this->ctftRef) {
+            $this->ctftRef = random_int(100005000000, 100015000000);
+        }
+
+        return $this->ctftRef += random_int(10000, 150000);
+    }
+
+    // Recurring pool entry; earlier entries come up more often
+    private function poolPick(string $pool)
+    {
+        $items = $this->cityPools[$pool] ?? [];
+
+        if (!$items) {
+            return null;
+        }
+
+        $weights = [];
+        foreach (array_keys($items) as $i) {
+            $weights[$i] = count($items) - $i;
+        }
+
+        return $items[$this->pickWeighted($weights)];
+    }
+
+    /**
+     * Sample amount for a transaction type (City statement generator).
+     */
+    private function sampleAmount(string $type): float
+    {
+        switch ($type) {
+            case 'PURCHASE':
+                return random_int(500, 15000);
+
+            case 'ATM Withdraw':
+                $atmAmounts = [2000, 5000, 10000, 15000, 20000, 30000];
+                return $atmAmounts[array_rand($atmAmounts)];
+
+            case 'CHARGE':
+            case 'INTEREST':
+            case 'WTAX':
+                return random_int(1500, 3000);
+
+            case 'CTFT':
+                return random_int(400, 3000) * 100;
+
+            case 'NPSB':
+            case 'CTNPSB':
+            case 'CTEFTN':
+                return random_int(100, 1000) * 100;
+
+            case 'BFTN':
+                return random_int(300, 2000) * 100;
+
+            case 'BKASH':
+            case 'NAGAD':
+                return random_int(50, 5000) * 10;
+
+            case 'INTER BRANCH':
+            case 'RTGS':
+                return random_int(100, 2000) * 100;
+
+            case 'REVERSED':
+                return random_int(50, 1000) * 100;
+
+            case 'CASH DEPOSIT':
+                return random_int(50, 2000) * 100;
+
+            default:
+                return random_int(1000, 500000);
+        }
+    }
+
+    private function generateDescription($type = null, ?Carbon $date = null)
+    {
+        $date = $date ?? now();
+
         $types = ['NPSB','BFTN', 'CTFT', 'PURCHASE', 'ATM Withdraw', 'CHARGE', 'INTEREST', 'WTAX'];
         $type = $type ?? $types[array_rand($types)];
 
         switch ($type) {
             case 'NPSB':
-                $banks = ['DBBL', 'EBL', 'ONBL', 'BRBL', 'IFIC','ABBL','SEBL'];
-                return 'NPSB IN/' . $banks[array_rand($banks)] . '/' . rand(1000000000000, 9999999999999);
+                // e.g. NPSB IN/ABBL/1111188619300 (recurring senders)
+                [$bank, $account] = $this->poolPick('npsbIn')
+                    ?? [['DBBL', 'EBL', 'IFIC', 'ABBL'][rand(0, 3)], rand(1000000000000, 9999999999999)];
+                return 'NPSB IN/' . $bank . '/' . $account;
+
+            case 'CTNPSB':
+            case 'CTEFTN':
+            case 'REVERSED':
+                // e.g. CT-NPSB-NRBC-100005682366-017531500001121 (ref from the running sequence)
+                [$bank, $account] = $this->poolPick('npsbOut') ?? ['MTBL', '0' . rand(1000000000000, 9999999999999)];
+                $line = ($type === 'CTEFTN' ? 'CT-EFTN-' : 'CT-NPSB-') . $bank . '-' . $this->nextTransferRef() . '-' . $account;
+                return $type === 'REVERSED' ? 'REVERSED : ' . $line : $line;
 
             case 'BFTN':
                 return 'BFTN/REFERENCE/' . rand(10000000, 99999999);
 
+            case 'BKASH':
+            case 'NAGAD':
+                // e.g. bKash_Inc/081408240080/08-08-2026 14:08:24
+                // (reference = day + time + 4 random digits)
+                $time = $date->copy()->setTime(rand(8, 22), rand(0, 59), rand(0, 59));
+                $wallet = $type === 'BKASH' ? 'bKash' : 'Nagad';
+
+                return $wallet . '_Inc/' . $time->format('dHis') . sprintf('%04d', rand(0, 9999))
+                    . '/' . $time->format('d-m-Y H:i:s');
+
             case 'CTFT':
-                return 'CT/FT-CBLTA-' . rand(250000000000, 259999999999) . '-' . rand(10000, 99999);
+                // e.g. CT-FT-100005536282-1254874784001: running reference; about half
+                // to the account's own reference, the rest to a few recurring
+                // accounts, ~15% ABA TO FIN to a few recurring 1781... accounts
+                $ref = $this->nextTransferRef();
+                $roll = rand(1, 100);
+
+                if ($roll <= 15) {
+                    return 'CT-FT-ABA TO FIN-' . $ref . '-' . ($this->poolPick('aba') ?? '1781' . rand(100000000, 999999999));
+                }
+
+                $account = $roll <= 60
+                    ? ($this->taxRefAccount ?? $this->randomBranchAccount())
+                    : ($this->poolPick('ctft') ?? $this->randomBranchAccount());
+
+                return 'CT-FT-' . $ref . '-' . $account;
 
             case 'PURCHASE':
                 return 'POS PURCHASE ID#' . rand(10000000, 99999999);
@@ -570,10 +705,24 @@ class statemntController extends Controller
                 return 'CITYTOUCH/NPSB-' . rand(1000000000000, 9999999999999);
 
             case 'INTEREST':
-                return $this->randomAccount() . ':Int.Pd:' . now()->format('d-m-Y');
-
             case 'WTAX':
-                return $this->randomAccount() . ':WTax Pd:' . now()->format('d-m-Y');
+                // Period = the posting month, e.g. 1254874784001:Int.Pd:01-08-2026 to 31-08-2026
+                return ($this->taxRefAccount ?? $this->randomAccount())
+                    . ($type === 'INTEREST' ? ':Int.Pd:' : ':WTax Pd:')
+                    . $date->copy()->startOfMonth()->format('d-m-Y') . ' to '
+                    . $date->copy()->endOfMonth()->format('d-m-Y');
+
+            case 'INTER BRANCH':
+                return 'X' . rand(1000, 9999) . ':INTER BRANCH';
+
+            case 'RTGS':
+                // e.g. RTGS FROM ONE BK-NAFIS AKBAR
+                $banks = ['ONE', 'PRIME', 'EASTERN', 'MUTUAL TRUST', 'BRAC', 'DHAKA'];
+                return 'RTGS FROM ' . $banks[array_rand($banks)] . ' BK-' . ($this->rtgsName ?: 'ACCOUNT HOLDER');
+
+            case 'CASH DEPOSIT':
+                $branches = ['GULSHAN BR', 'BANANI BR', 'DHANMONDI BR', 'MOTIJHEEL BR', 'UTTARA BR', 'PROGATI SARANI BR', 'MIRPUR BR', 'O.R. NIZAM ROAD BR'];
+                return 'CASH DEPOSIT: ' . $branches[array_rand($branches)];
 
             default:
                 return 'MISC TRANSACTION';
@@ -585,6 +734,13 @@ class statemntController extends Controller
     {
         return rand(1000000000000, 9999999999999);
     }
+
+    // 13-digit account like the real ones, e.g. 1254874784001
+    private function randomBranchAccount(): string
+    {
+        return '12' . rand(30000000, 69999999) . '001';
+    }
+
     public function citySolvency()
     {
         return view('bankStatement.citySolvency');

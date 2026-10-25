@@ -6,9 +6,18 @@
 <title>Sample Statement of Account</title>
 
 <style>
+@php
+    // Uniform scale set by the controller (DPI raised to match) so the page
+    // keeps 100px blank below the footer. Original margins: 8mm / 8mm / 20mm / 8mm.
+    $pdfScale = $pdfScale ?? 1;
+    $marginTop = round(8 * $pdfScale, 3);
+    // Centred after scaling, then trimmed by $pdfSideTrim px on each side
+    $marginSide = round(8 * $pdfScale + 105 * (1 - $pdfScale) - ($pdfSideTrim ?? 0) * 25.4 / 96, 3);
+    $marginBottom = round(297 - 277 * $pdfScale, 3);
+@endphp
 @page {
     size: A4 portrait;
-    margin: 8mm 8mm 20mm 8mm;
+    margin: {{ $marginTop }}mm {{ $marginSide }}mm {{ $marginBottom }}mm {{ $marginSide }}mm;
 }
 
 * {
@@ -57,7 +66,7 @@ table {
 .right-panel {
     width: 39%;
     vertical-align: top;
-    padding-left: 10px;
+    padding-left: 40px; /* 30px extra gap before the QR */
 }
 
 .logo-area {
@@ -84,6 +93,7 @@ table {
     color: #777;
     padding-bottom: 10px;
     overflow-wrap: anywhere;
+    text-transform: uppercase;
 }
 
 .divider {
@@ -119,8 +129,27 @@ table {
     color: #000;
 }
 
+/* Values 1px smaller than the labels */
+.details-table td.details-value {
+    font-size: 8px;
+}
+
+/* Account Type / Branch column starts 10px closer than the original layout
+   (~434px wide table): value 1 gives up 10px, label 2 trimmed to fit its text */
+.details-table td:nth-child(3) {
+    width: 28.7%;
+}
+
+.details-table td:nth-child(4) {
+    width: 13.4%;
+}
+
+.details-table td:nth-child(6) {
+    width: 36.9%;
+}
+
 .statement-title {
-    font-size: 23px;
+    font-size: 21px;
     line-height: 28px;
     font-weight: bold;
     margin: 10px 0 19px;
@@ -151,10 +180,10 @@ table {
 
 .qr-logo-wrapper {
     position: absolute;
-    top: 28px;
-    left: 28px;
-    width: 28px;
-    height: 28px;
+    top: 30px;
+    left: 30px;
+    width: 24px;
+    height: 24px;
     background: #fff;
     font-size: 0;
     line-height: 0;
@@ -165,8 +194,8 @@ table {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 .verify-cell {
@@ -181,6 +210,7 @@ table {
     font-size: 8px;
     font-weight: bold;
     line-height: 12px;
+    white-space: nowrap;
 }
 
 .verify-heading-note {
@@ -200,6 +230,7 @@ table {
     color: #666;
     font-size: 8px;
     line-height: 12px;
+    white-space: nowrap;
 }
 
 .verify-url {
@@ -284,7 +315,9 @@ table {
     width: 60%;
     text-align: right;
     vertical-align: top;
-    font-size: 23px;
+    font-size: 21px; /* same as the page 1 title */
+    line-height: 28px;
+    padding-top: 11px; /* same top offset as the page 1 title (10px margin + 1px cell padding) */
     font-weight: bold;
 }
 
@@ -357,8 +390,14 @@ table {
     border-left: 1px solid #ccc;
 }
 
+/* Separator after TRANSACTIONS: 10px taller (vertical inline padding, text stays put) */
+.heading-left .heading-sep {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
 .heading-sep-wide {
-    margin-left: 25px;
+    margin-left: 5px; /* Date of Generation sits 20px further right */
     padding: 4px 0 4px 25px;
 }
 
@@ -404,36 +443,42 @@ table {
 
 .transactions-table th:nth-child(1),
 .transactions-table td:nth-child(1) {
-    width: 11%;
+    width: 9.64%; /* 10px narrower: 11% of the ~733px table minus 10px */
 }
 
 .transactions-table th:nth-child(2),
 .transactions-table td:nth-child(2) {
-    width: 45%;
+    width: 51.81%; /* +10px from the date column, +40px from the amount columns */
 }
 
 .transactions-table th:nth-child(3),
 .transactions-table td:nth-child(3) {
-    width: 9%;
+    width: 7.91%; /* -8px */
 }
 
 .transactions-table th:nth-child(4),
 .transactions-table td:nth-child(4) {
-    width: 12%;
+    width: 10.91%; /* -8px */
 }
 
 .transactions-table th:nth-child(5),
 .transactions-table td:nth-child(5) {
-    width: 10%;
+    width: 8.64%; /* -10px */
 }
 
 .transactions-table th:nth-child(6),
 .transactions-table td:nth-child(6) {
-    width: 13%;
+    width: 11.09%; /* -14px */
 }
 
 .text-right {
     text-align: right !important;
+}
+
+/* Page 1: slightly taller rows so the 23 rows end ~20px closer to the footer */
+.transactions-table.first-page-rows td {
+    padding-top: 6.45px;
+    padding-bottom: 6.45px;
 }
 
 /* Page 2+: slightly taller rows so 32 rows end ~10px above the footer */
@@ -455,7 +500,7 @@ table {
 /* Repeating footer */
 .statement-footer-wrap {
     position: fixed;
-    bottom: -15mm;
+    bottom: -56.69px; /* 15mm in px, so it scales with the page */
     left: 0;
     right: 0;
     width: 100%;
@@ -494,24 +539,40 @@ table {
     font-size: 10px;
 }
 
+/* Notes column 30px wider (~733px footer): 10px from each of the other columns */
 .footer-notes {
-    width: 47%;
+    width: 51.09%;
+}
+
+/* Smaller body text so the notes fit on 2 lines; the label keeps 8px */
+.statement-footer td.footer-notes {
+    font-size: 7.6px;
+}
+
+.statement-footer td.footer-notes .footer-label {
+    font-size: 8px;
 }
 
 .footer-website {
-    width: 15%;
+    width: 15.68%; /* +15px from overseas: breathing room next to the separator */
     text-align: center;
 }
 
 .footer-local {
-    width: 14%;
+    width: 12.64%;
     text-align: center;
 }
 
 .footer-overseas {
-    width: 24%;
+    width: 20.59%;
     white-space: nowrap;
     text-align: center;
+}
+
+/* Overseas number flush with the right margin */
+.statement-footer td.footer-overseas {
+    text-align: right;
+    padding-right: 0;
 }
 
 .footer-label,
@@ -569,12 +630,12 @@ table {
 
     /*
      * Rows per page are sized to leave a 20px gap above the footer.
-     * Page 1: Opening Balance row + 25 transactions with a one-line address;
+     * Page 1: Opening Balance row + up to 23 transactions (25 would fit with a one-line address);
      *         each extra address line (~75 chars) costs one row.
      * Following pages: 32 transaction rows each (~10px gap above the footer).
      */
     $addressLines = max(1, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 75));
-    $firstPageRows = max(15, 25 - ($addressLines - 1));
+    $firstPageRows = min(23, max(15, 25 - ($addressLines - 1)));
 
     $firstPage = $allTransactions->take($firstPageRows);
     $remaining = $allTransactions->slice($firstPageRows)->values();
@@ -756,9 +817,16 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
                     <table class="verify-table">
                         <tr>
                             <td class="qr-cell" width="92">
+                                @php
+                                    $stmtRefNo = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 13));
+                                    $stmtVerifyUrl = 'https://webrouting.tripdeigner.com/qr-statement/verify?' . http_build_query([
+                                        'reference_no' => $stmtRefNo,
+                                        'acc_no'       => $accountNumber,
+                                    ]);
+                                @endphp
                                 <div class="qr-code-wrapper">
                                     <img
-                                        src="{{ \App\Helpers\QrHelper::dottedPng('https://tripdesigner.net') }}"
+                                        src="{{ \App\Helpers\QrHelper::dottedPng($stmtVerifyUrl, 0.8, \chillerlan\QRCode\QRCode::VERSION_AUTO, false, \chillerlan\QRCode\QRCode::ECC_M, true, 1.05) }}"
                                         class="qr-code-image"
                                         alt="Sample QR code"
                                     >
@@ -788,11 +856,11 @@ URL below
                                 </div>
 
                                 <div class="verify-url">
-                                    https://tripdesigner.net
+                                    http://t.cbl.fyi/i/{{ random_int(10, 99) }}/stmt
                                 </div>
 
                                 <div class="sample-watermark">
-                                    {{ strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 15)) }}
+                                    {{ $stmtRefNo }}
                                 </div>
                             </td>
                         </tr>
@@ -810,21 +878,21 @@ URL below
                     <td>
                         <div class="summary-label">Opening Balance{{ $periodStartText ? ' as of ' . $periodStartText : '' }}</div>
                         <div class="summary-value">
-                            {{ $currency }} {{ number_format($openingBalance, 2) }}
+                            {{ number_format($openingBalance, 2) }}
                         </div>
                     </td>
 
                     <td>
                         <div class="summary-label">Total Deposits</div>
                         <div class="summary-value">
-                            {{ $currency }} {{ number_format($totalDeposits, 2) }}
+                            {{ number_format($totalDeposits, 2) }}
                         </div>
                     </td>
 
                     <td>
                         <div class="summary-label">Total Withdrawals</div>
                         <div class="summary-value">
-                            {{ $currency }} {{ number_format($totalWithdrawals, 2) }}
+                            {{ number_format($totalWithdrawals, 2) }}
                         </div>
                     </td>
 
@@ -888,7 +956,7 @@ URL below
         </table>
     </div>
 
-    <table class="transactions-table{{ $pageIndex > 0 ? ' continuation-rows' : '' }}">
+    <table class="transactions-table{{ $pageIndex > 0 ? ' continuation-rows' : ' first-page-rows' }}">
         <thead>
             <tr>
                 <th>DATE</th>
