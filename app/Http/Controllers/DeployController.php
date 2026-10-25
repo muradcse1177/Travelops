@@ -71,6 +71,33 @@ class DeployController extends Controller
             ], 200, [], JSON_PRETTY_PRINT);
         }
 
+        // ── ?check=visitor_logs — row count / size of visitor_logs.
+        //    Add &do=truncate to wipe it (remote MySQL is IP-locked, so
+        //    this runs server-side).
+        if ($request->query('check') === 'visitor_logs') {
+            $db = \Illuminate\Support\Facades\DB::class;
+            $stats = function () use ($db) {
+                $t = $db::selectOne("SELECT ROUND((data_length+index_length)/1048576,1) mb FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='visitor_logs'");
+                return [
+                    'rows'   => $db::table('visitor_logs')->count(),
+                    'size_mb'=> $t->mb ?? null,
+                    'oldest' => $db::table('visitor_logs')->min('created_at'),
+                    'newest' => $db::table('visitor_logs')->max('created_at'),
+                ];
+            };
+            $before = $stats();
+            $after  = null;
+            if ($request->query('do') === 'truncate') {
+                $db::statement('TRUNCATE TABLE visitor_logs');
+                $after = $stats();
+            }
+            return response()->json([
+                'database' => $db::connection()->getDatabaseName(),
+                'before'   => $before,
+                'after'    => $after,
+            ], 200, [], JSON_PRETTY_PRINT);
+        }
+
         @set_time_limit(180);
         @ignore_user_abort(true);
 
