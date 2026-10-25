@@ -1,246 +1,971 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>City Bank Statement</title>
-    <style>
-        body {
-            font-family: "Times New Roman", Times, serif;
-            font-size: 12px;
-            color: #000;
-        }
+<meta charset="UTF-8">
+<title>Sample Statement of Account</title>
 
-        .logo {
-            text-align: left;
-            margin-bottom: 5px;
-        }
-        .logo img {
-            height: 80px;
-        }
-        .header-table {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .header-table td {
-            vertical-align: top;
-            padding: 3px;
-        }
-        .header-left {
-            width: 60%;
-            font-size: 12px;
-        }
-        .header-right {
-            width: 40%;
-            font-size: 11px;
-        }
-        h4 {
-            text-align: center;
-            margin: 10px 0;
-            font-size: 12px;
-        }
-        table.statement {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-        }
-        table.statement th, table.statement td {
-            border: 1px solid #000;
-            padding: 3px;
-            font-size: 11px;
-        }
-        table.statement th {
-            background: #f1f1f1;
-            text-align: center;
-        }
-        table.statement td {
-            text-align: right;
-        }
-        table.statement td:nth-child(1),
-        table.statement td:nth-child(2) {
-            text-align: center;
-        }
-        table.statement td:nth-child(3) {
-            text-align: left;
-        }
-        .footer {
-            margin-top: 20px;
-            text-align: right;
-            font-size: 10px;
-        }
-        table {
-            font-family: "Times New Roman", Times, serif;
-        }
-        header, footer {
-            font-family: "Times New Roman", Times, serif;
-        }
-        @page {
-            margin-top: 200px;   /* header এর height অনুযায়ী space */
-            margin-bottom: 70px;
-            margin-left: 40px;
-            margin-right: 40px;
-        }
-        header {
-            position: fixed;
-            top: -180px;   /* @page margin এর সাথে match করবে */
-            left: 0;
-            right: 0;
-            height: 160px;
-        }
+<style>
+@page {
+    size: A4 portrait;
+    margin: 8mm 8mm 20mm 8mm;
+}
 
-        .news-gothic {
-            font-family: 'NewsGothicStd', sans-serif;
-        }
+* {
+    box-sizing: border-box;
+}
 
-        /* Optional: override with News Gothic Mono if used */
-        .mono {
-            font-family: 'NewsGothicStd', monospace;
-            font-size: 11px;
-        }
-    </style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px;
+    color: #111;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.statement-page {
+    width: 100%;
+}
+
+.sample-notice {
+    text-align: center;
+    font-size: 8px;
+    font-weight: bold;
+    color: #a21d2a;
+    border: 1px solid #a21d2a;
+    padding: 4px;
+    margin-bottom: 9px;
+}
+
+/* First page header */
+.header-table {
+    table-layout: fixed;
+}
+
+.left-panel {
+    width: 61%;
+    vertical-align: top;
+    padding-right: 12px;
+}
+
+.right-panel {
+    width: 39%;
+    vertical-align: top;
+    padding-left: 10px;
+}
+
+.logo-area {
+    height: 57px;
+    vertical-align: top;
+}
+
+.bank-logo {
+    display: block;
+    max-width: 105px;
+    max-height: 48px;
+}
+
+.customer-name {
+    font-size: 10px;
+    font-weight: bold;
+    padding: 4px 0 7px;
+    text-transform: uppercase;
+}
+
+.customer-address {
+    font-size: 9px;
+    line-height: 13px;
+    color: #777;
+    padding-bottom: 10px;
+    overflow-wrap: anywhere;
+}
+
+.divider {
+    border-top: 1px solid #ddd;
+}
+
+.details-table {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    table-layout: fixed;
+}
+
+.details-table td {
+    padding: 2px 1px;
+    font-size: 9px;
+    line-height: 11px;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.details-label {
+    width: 17%;
+    color: #888;
+}
+
+.details-colon {
+    width: 2%;
+    text-align: center;
+}
+
+.details-value {
+    width: 31%;
+    color: #000;
+}
+
+.statement-title {
+    font-size: 23px;
+    line-height: 28px;
+    font-weight: bold;
+    margin: 10px 0 19px;
+    text-align: left;
+}
+
+.verify-table {
+    table-layout: auto;
+}
+
+.qr-cell {
+    width: 84px;
+    padding: 4px 8px 4px 0;
+    vertical-align: top;
+}
+
+.qr-code-wrapper {
+    position: relative;
+    width: 84px;
+    height: 84px;
+}
+
+.qr-code-image {
+    display: block;
+    width: 84px;
+    height: 84px;
+}
+
+.qr-logo-wrapper {
+    position: absolute;
+    top: 28px;
+    left: 28px;
+    width: 28px;
+    height: 28px;
+    background: #fff;
+    font-size: 0;
+    line-height: 0;
+}
+
+/* Absolutely placed so no inline line box adds empty space under the logo */
+.qr-logo {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+}
+
+.verify-cell {
+    vertical-align: top;
+    padding: 4px 0;
+    font-size: 8px;
+    line-height: 12px;
+    overflow-wrap: anywhere;
+}
+
+.verify-heading {
+    font-size: 8px;
+    font-weight: bold;
+    line-height: 12px;
+}
+
+.verify-heading-note {
+    margin-left: 4px;
+    font-size: 7px;
+    font-weight: normal;
+    color: #777;
+}
+
+.red-rule {
+    height: 1px;
+    background: #ed1c2e;
+    margin: 5px 0 12px;
+}
+
+.verify-description {
+    color: #666;
+    font-size: 8px;
+    line-height: 12px;
+}
+
+.verify-url {
+    margin-top: 4px;
+    font-size: 8px;
+    overflow-wrap: anywhere;
+}
+
+
+.sample-watermark {
+    margin-top: 10px;
+    color: #000;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Account summary */
+.summary-section {
+    margin-top: 24px;
+    margin-bottom: 30px;
+}
+
+.section-heading {
+    font-size: 9px;
+    font-weight: bold;
+    padding-bottom: 6px;
+}
+
+.red-border {
+    height: 1px;
+    background: #ed1c2e;
+}
+
+.summary-table {
+    table-layout: fixed;
+    margin: 5px 0;
+}
+
+.summary-table td {
+    width: 25%;
+    text-align: right;
+    padding: 3px 7px;
+    border-right: 1px solid #ddd;
+}
+
+.summary-table td:first-child {
+    padding-left: 0;
+}
+
+.summary-table td:last-child {
+    padding-right: 0;
+    border-right: none;
+}
+
+.summary-label {
+    font-size: 9px;
+    color: #777;
+    padding-bottom: 4px;
+}
+
+.summary-value {
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Continuation page header */
+.continuation-header {
+    margin-bottom: 0;
+    padding-bottom: 20px;
+}
+
+.continuation-top {
+    margin-bottom: 20px;
+}
+
+.continuation-logo {
+    width: 40%;
+    vertical-align: top;
+}
+
+.continuation-title {
+    width: 60%;
+    text-align: right;
+    vertical-align: top;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+.continuation-details {
+    table-layout: fixed;
+}
+
+.continuation-details td {
+    font-size: 10px;
+    vertical-align: top;
+}
+
+.continuation-name {
+    width: 60%;
+    text-align: left;
+}
+
+.continuation-name-value {
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.continuation-account {
+    width: 40%;
+    text-align: right;
+}
+
+/* Transactions heading */
+.transactions-heading {
+    margin-top: 10px;
+    padding-bottom: 17px;
+    border-bottom: 1px solid #ed1c2e;
+}
+
+.transaction-heading-table {
+    table-layout: fixed;
+}
+
+.transaction-heading-table td {
+    vertical-align: middle;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 14px;
+    color: #777;
+    white-space: normal;
+}
+
+.heading-left {
+    width: 60%;
+    padding-left: 0 !important;
+    text-align: left;
+}
+
+.heading-right {
+    width: 40%;
+    padding-right: 0 !important;
+    text-align: right;
+}
+
+.heading-title {
+    color: #ed1c2e;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.heading-sep {
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid #ccc;
+}
+
+.heading-sep-wide {
+    margin-left: 25px;
+    padding: 4px 0 4px 25px;
+}
+
+.transaction-heading-table strong {
+    color: #111;
+    font-weight: normal;
+}
+
+/* Transaction table */
+.transactions-table {
+    table-layout: fixed;
+    width: 100%;
+    font-size: 9px;
+}
+
+.transactions-table thead {
+    display: table-header-group;
+}
+
+.transactions-table tr {
+    page-break-inside: avoid;
+}
+
+.transactions-table th {
+    text-align: left;
+    font-size: 8.5px;
+    font-weight: bold;
+    line-height: 12px;
+    padding: 9px 3px 7px;
+    color: #111;
+    border-bottom: 0.5px solid #ed1c2e;
+}
+
+.transactions-table td {
+    padding: 6px 3px;
+    color: #111;
+    font-size: 8px;
+    line-height: 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e5e5e5;
+    overflow-wrap: anywhere;
+}
+
+.transactions-table th:nth-child(1),
+.transactions-table td:nth-child(1) {
+    width: 11%;
+}
+
+.transactions-table th:nth-child(2),
+.transactions-table td:nth-child(2) {
+    width: 45%;
+}
+
+.transactions-table th:nth-child(3),
+.transactions-table td:nth-child(3) {
+    width: 9%;
+}
+
+.transactions-table th:nth-child(4),
+.transactions-table td:nth-child(4) {
+    width: 12%;
+}
+
+.transactions-table th:nth-child(5),
+.transactions-table td:nth-child(5) {
+    width: 10%;
+}
+
+.transactions-table th:nth-child(6),
+.transactions-table td:nth-child(6) {
+    width: 13%;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+/* Page 2+: slightly taller rows so 32 rows end ~10px above the footer */
+.transactions-table.continuation-rows td {
+    padding-top: 6.3px;
+    padding-bottom: 6.3px;
+}
+
+/* Page 2+: 5px extra space above the first row */
+.transactions-table.continuation-rows tbody tr:first-child td {
+    padding-top: 11.3px;
+}
+
+.transactions-table tr.opening-row td {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+/* Repeating footer */
+.statement-footer-wrap {
+    position: fixed;
+    bottom: -15mm;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: #fff;
+    border-top: 1px solid #ed1c2e;
+    padding-top: 3px;
+}
+
+.statement-footer {
+    table-layout: fixed;
+}
+
+.statement-footer td {
+    padding: 1px 5px 2px;
+    vertical-align: top;
+    font-size: 8px;
+    line-height: 10px;
+    color: #555;
+    overflow-wrap: anywhere;
+}
+
+/* Column separator: drawn on an inner block so it is ~20px shorter than the row */
+.statement-footer .footer-sep {
+    border-left: 1px solid #ddd;
+    padding: 8.5px 0;
+}
+
+.statement-footer td.footer-website,
+.statement-footer td.footer-local,
+.statement-footer td.footer-overseas {
+    vertical-align: middle;
+    font-size: 9px;
+}
+
+.statement-footer .footer-value {
+    font-size: 10px;
+}
+
+.footer-notes {
+    width: 47%;
+}
+
+.footer-website {
+    width: 15%;
+    text-align: center;
+}
+
+.footer-local {
+    width: 14%;
+    text-align: center;
+}
+
+.footer-overseas {
+    width: 24%;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.footer-label,
+.footer-value {
+    font-weight: bold;
+    color: #222;
+}
+
+.footer-icon {
+    width: 10px;
+    height: 10px;
+    margin-right: 3px;
+    vertical-align: middle;
+}
+
+/* End of report: full-width black rule with the label in the middle */
+.end-statement {
+    margin-top: 55px;
+    page-break-inside: avoid;
+}
+
+.end-statement td.end-line {
+    padding: 0;
+    vertical-align: middle;
+}
+
+.end-rule {
+    height: 0;
+    margin-top: 1px;
+    border-top: 1px solid #111;
+}
+
+.end-text {
+    width: 1%;
+    white-space: nowrap;
+    padding: 0 4px;
+    font-size: 9px;
+    color: #111;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.page-break {
+    page-break-after: always;
+}
+</style>
 </head>
+
 <body>
-<header>
-    <div class="logo" style="display:inline-block; background:#f6f6f6; padding:1px;">
-        <img src="{{ public_path('1cc.png') }}" alt="City Bank" width="180" style="display:block;">
-    </div>
 
-    <table class="header-table" style="font-size: 12px; width:100%;">
-        <tr>
-            <td class="header-left" style="line-height: 1.8; width:60%;">
-                <strong style="display:inline-block; border-bottom:1px solid #000; margin-bottom:5px;">
-                    {{ strtoupper($info['accountName']) }}
-                </strong><br>
-
-                <p style="line-height: normal; margin-bottom: 5px;">
-                    {{ strtoupper($info['accountAddress']) }}
-                </p>
-
-                <p><strong>{{ strtoupper($info['bankBranch']) }}</strong></p>
-                <p style="line-height: normal;">
-                    <strong>{{ strtoupper($info['branchAddress']) }}</strong>
-                </p>
-                <strong>Routing No: </strong>{{ $info['routing'] }} <br>
-                <strong>Swift Code: </strong>CIBLBDDH
-            </td>
-
-            <td class="header-right" style="line-height: 2.0; width:40%;">
-                <br><br>
-                <br>
-                <strong>Account Number:</strong> {{ $info['accountNumber'] }} <br>
-                <strong>Account Type:</strong> {{ strtoupper($info['productName']) }} <br>
-                <strong>Customer ID:</strong> {{ $info['customerId'] }} <br>
-                <strong>Currency:</strong> {{ strtoupper($info['currency']) }} <br>
-                <strong>Status:</strong> ACTIVE
-            </td>
-        </tr>
-    </table>
-
-    <h4 style="font-size: 14px; text-align:center; margin-top:8px;">
-        <strong>
-            @php
-                $dates = explode(' - ', $info['periodFrom']);
-                $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('d-M-Y');
-                $toDate = isset($dates[1]) ? \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('d-M-Y') : '';
-            @endphp
-            Account Statement from Date: {{ strtoupper($fromDate) }} Till Date: {{ strtoupper($toDate) }}
-        </strong>
-    </h4>
-</header>
-
-
-{{-- Statement Table --}}
 @php
-    $chunks = array_chunk($transactions, 34); // প্রতি পেজে ৩২টা ট্রানজেকশন
-    $opening = $info['openingBalance'] ?? 0;
-    $totalDeposit = 0;
-    $totalWithdrawal = 0;
-    $closing = $opening;
+    $info = $info ?? [];
+
+    $allTransactions = collect($transactions ?? [])->values();
+
+    /*
+     * Rows per page are sized to leave a 20px gap above the footer.
+     * Page 1: Opening Balance row + 25 transactions with a one-line address;
+     *         each extra address line (~75 chars) costs one row.
+     * Following pages: 32 transaction rows each (~10px gap above the footer).
+     */
+    $addressLines = max(1, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 75));
+    $firstPageRows = max(15, 25 - ($addressLines - 1));
+
+    $firstPage = $allTransactions->take($firstPageRows);
+    $remaining = $allTransactions->slice($firstPageRows)->values();
+
+    $pages = collect([$firstPage])->concat($remaining->chunk(32))->values();
+
+    // The end-of-report line needs 2-3 rows of space, so if the last
+    // page is that full, its overflow rows move to a final page of their own.
+    $lastIndex = $pages->count() - 1;
+    $lastCapacity = $lastIndex === 0 ? $firstPageRows - 2 : 32 - 3;
+
+    if ($pages[$lastIndex]->count() > $lastCapacity) {
+        $lastPage = $pages->pop()->values();
+        $pages->push($lastPage->take($lastCapacity));
+        $pages->push($lastPage->slice($lastCapacity)->values());
+    }
+    $totalPages = max(1, $pages->count());
+
+    $accountName = $info['accountName'] ?? '';
+    $accountAddress = $info['accountAddress'] ?? '';
+    $accountNumber = $info['accountNumber'] ?? '';
+    $accountStatus = $info['accountStatus'] ?? 'ACTIVE';
+    $productName = $info['productName'] ?? '';
+    $bankBranch = $info['bankBranch'] ?? '';
+    $currency = $info['currency'] ?? 'BDT';
+    $period = $info['periodFrom'] ?? '';
+
+    // "10-07-2026 - 18-10-2026" -> "From 10 Jul 2026 to 18 Oct 2026"
+    $periodText = $period;
+    $periodStartText = '';
+    $periodEndText = '';
+    $periodParts = array_map('trim', explode(' - ', $period));
+
+    if (count($periodParts) === 2) {
+        try {
+            $periodStartText = \Carbon\Carbon::createFromFormat('!d-m-Y', $periodParts[0])->format('d M Y');
+            $periodEndText = \Carbon\Carbon::createFromFormat('!d-m-Y', $periodParts[1])->format('d M Y');
+            $periodText = 'From '
+                . \Carbon\Carbon::createFromFormat('!d-m-Y', $periodParts[0])->format('d M Y')
+                . ' to '
+                . \Carbon\Carbon::createFromFormat('!d-m-Y', $periodParts[1])->format('d M Y');
+        } catch (\Throwable $e) {
+            $periodText = $period;
+        }
+    }
+
+    $generationDate = !empty($info['printDate'])
+        ? \Carbon\Carbon::parse($info['printDate'])->format('d M Y')
+        : now()->format('d M Y');
+
+    $openingBalance = (float) (
+        $info['openingBalance']
+        ?? $info['opening_balance']
+        ?? 0
+    );
+
+    $totalDeposits = $allTransactions->sum(function ($row) {
+        return (float) ($row['deposit'] ?? 0);
+    });
+
+    $totalWithdrawals = $allTransactions->sum(function ($row) {
+        return (float) ($row['withdrawal'] ?? 0);
+    });
+
+    $closingBalance = $allTransactions->isNotEmpty()
+        ? (float) ($allTransactions->last()['balance'] ?? $openingBalance)
+        : $openingBalance;
+
+    // Footer icons as inline SVG (DomPDF cannot render the unicode glyphs)
+    $globeIcon = 'data:image/svg+xml;base64,' . base64_encode(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ed1c2e" stroke-width="2" stroke-linecap="round">'
+        . '<circle cx="12" cy="12" r="10"/>'
+        . '<ellipse cx="12" cy="12" rx="4.5" ry="10"/>'
+        . '<line x1="2" y1="12" x2="22" y2="12"/>'
+        . '</svg>'
+    );
+
+    $headsetIcon = 'data:image/svg+xml;base64,' . base64_encode(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ed1c2e" stroke-width="2" stroke-linecap="round">'
+        . '<path d="M4 15 V12 A8 8 0 0 1 20 12 V15"/>'
+        . '<rect x="3" y="13" width="4" height="6" rx="1.5"/>'
+        . '<rect x="17" y="13" width="4" height="6" rx="1.5"/>'
+        . '<path d="M19 19 V20 A2 2 0 0 1 17 22 H13"/>'
+        . '</svg>'
+    );
+
 @endphp
 
-@foreach ($chunks as $index => $pageTransactions)
-    {{-- Spacer --}}
-    @if ($index === 0)
-        <div style="height: 175px;"></div>
-    @else
-        <div style="page-break-before: always;"></div>
-        <div style="height: 175px;"></div>
-    @endif
+{{-- Fixed footer outside the page loop: repeated on each PDF page --}}
+<div class="statement-footer-wrap">
+    <table class="statement-footer">
+        <tr>
+            <td class="footer-notes">
+                <span class="footer-label">Notes:</span><br>
+                This is a system generated statement and requires no signature. Please advise the bank of any discrepancy
+within 14 days of receipt of this statement (if any), otherwise, this statement will be deemed correct.
+            </td>
 
-    <table class="statement" style="width:100%; border-collapse:collapse; font-size:12px; margin-top: -20px;" >
-        <thead>
-        <tr style="background:#f1f1f1;">
-            <th style="width:10%; text-align:center;">Date</th>
-            <th style="width:10%; text-align:center;">Cheque</th>
-            <th style="width:40%; text-align:center;">Description</th>
-            <th style="width:10%; text-align:center;">Withdraw</th>
-            <th style="width:10%; text-align:center;">Deposit</th>
-            <th style="width:20%; text-align:center;">Balance</th>
+            <td class="footer-website">
+                <div class="footer-sep"><span class="footer-value"><img src="{{ $globeIcon }}" class="footer-icon" alt="">tripdesigner.net</span></div>
+            </td>
+
+            <td class="footer-local">
+                <div class="footer-sep"><span class="footer-value"><img src="{{ $headsetIcon }}" class="footer-icon" alt="">16234</span>
+                (Local)</div>
+            </td>
+
+            <td class="footer-overseas">
+                <div class="footer-sep"><span class="footer-value"><img src="{{ $headsetIcon }}" class="footer-icon" alt="">+880 2 8331040</span>
+                (Overseas)</div>
+            </td>
         </tr>
-        </thead>
-        <tbody>
-        {{-- Opening Balance শুধু প্রথম পেজে --}}
-        @if ($index === 0)
-            <tr>
-                <td style="text-align:center;"></td>
-                <td></td>
-                <td>Balance Forward</td>
-                <td></td>
-                <td></td>
-                <td style="text-align:right;">{{ number_format($opening, 2) }}</td>
-            </tr>
-        @endif
-
-        {{-- Transactions --}}
-        @foreach ($pageTransactions as $txn)
-            @php
-                $deposit = $txn['deposit'] ?? 0;
-                $withdrawal = $txn['withdrawal'] ?? 0;
-
-                if ($deposit > 0) {
-                    $closing += $deposit;
-                    $totalDeposit += $deposit;
-                } elseif ($withdrawal > 0 && $closing >= $withdrawal) {
-                    $closing -= $withdrawal;
-                    $totalWithdrawal += $withdrawal;
-                }
-            @endphp
-            <tr>
-                <td style="text-align:center; font-size:10px;">{{ $txn['date'] }}</td>
-                <td style="text-align:center; font-size:10px;"></td>
-                <td style="text-align:left; font-size:10px;">{{ $txn['description'] }}</td>
-                <td style="text-align:right; font-size:10px;">{{ $withdrawal ? number_format($withdrawal, 2) : '' }}</td>
-                <td style="text-align:right; font-size:10px;">{{ $deposit ? number_format($deposit, 2) : '' }}</td>
-                <td style="text-align:right; font-size:10px;">{{ number_format($closing, 2) }}</td>
-            </tr>
-        @endforeach
-        </tbody>
     </table>
+</div>
 
-    {{-- শুধু শেষ পেজে Summary --}}
-    @if ($loop->last)
-        <br><br>
+@foreach($pages as $pageIndex => $pageTransactions)
 
-        <table style="width:100%; font-size:14px; margin-bottom:60px;line-height: 1.8">
+<div class="statement-page">
+
+    @if($pageIndex === 0)
+
+        <table class="header-table">
             <tr>
-                <td style="width:50%; text-align:left;">
-                   Total Withdraws in BDT : {{ number_format($totalWithdrawal, 2) }} <br>
-                    Total Deposits in BDT : {{ number_format($totalDeposit, 2) }}
+                <td class="left-panel">
+                    <div class="logo-area">
+                        <img
+                            src="{{ url('public/cityb.png') }}"
+                            class="bank-logo"
+                            alt="Sample logo"
+                        >
+                    </div>
+
+                    <div class="customer-name">
+                        {{ $accountName }}
+                    </div>
+
+                    <div class="customer-address">
+                        {{ $accountAddress }}
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <table class="details-table">
+                        <tr>
+                            <td class="details-label">Account No.</td>
+                            <td class="details-colon">:</td>
+                            <td class="details-value">
+                                {{ $accountNumber ?: '—' }}
+                            </td>
+
+                            <td class="details-label">Account Type</td>
+                            <td class="details-colon">:</td>
+                            <td class="details-value">
+                                {{ $productName ?: '—' }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="details-label">Account Status</td>
+                            <td class="details-colon">:</td>
+                            <td class="details-value">
+                                {{ $accountStatus }}
+                            </td>
+
+                            <td class="details-label">Branch</td>
+                            <td class="details-colon">:</td>
+                            <td class="details-value">
+                                {{ $bankBranch ?: '—' }}
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width:50%; text-align:right;">
-                    Opening Balance : {{ number_format($opening, 2) }} (Cr) <br>
-                    <strong>Available Balance : {{ number_format($closing, 2) }} (Cr)</strong>
+
+                <td class="right-panel">
+                    <div class="statement-title">
+                        Statement of Account
+                    </div>
+
+                    <table class="verify-table">
+                        <tr>
+                            <td class="qr-cell" width="92">
+                                <div class="qr-code-wrapper">
+                                    <img
+                                        src="{{ \App\Helpers\QrHelper::dottedPng('https://tripdesigner.net') }}"
+                                        class="qr-code-image"
+                                        alt="Sample QR code"
+                                    >
+
+                                    <div class="qr-logo-wrapper">
+                                        <img
+                                            src="{{ url('public/citybw-tight.png') }}"
+                                            class="qr-logo"
+                                            alt="Sample logo"
+                                        >
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="verify-cell">
+                                <div class="verify-heading">
+                                    VERIFY THIS STATEMENT
+                                    <span class="verify-heading-note">Valid for 6 months</span>
+                                </div>
+
+                                <div class="red-rule"></div>
+
+                                <div class="verify-description">
+                                    Can't scan? Enter the reference number at the<br>
+URL below
+;
+                                </div>
+
+                                <div class="verify-url">
+                                    https://tripdesigner.net
+                                </div>
+
+                                <div class="sample-watermark">
+                                    {{ strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 15)) }}
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>
 
-        {{-- END OF STATEMENT Banner --}}
-        <div style="display:block; text-align:center; background:#d9d9d9;
-            padding:20px 0; font-weight:bold; font-size:14px;
-            margin:20px 0; font-style:italic; width:100%; box-sizing:border-box;">
-            END OF STATEMENT
+        <div class="summary-section">
+            <div class="section-heading">ACCOUNT SUMMARY</div>
+            <div class="red-border"></div>
+
+            <table class="summary-table">
+                <tr>
+                    <td>
+                        <div class="summary-label">Opening Balance{{ $periodStartText ? ' as of ' . $periodStartText : '' }}</div>
+                        <div class="summary-value">
+                            {{ $currency }} {{ number_format($openingBalance, 2) }}
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="summary-label">Total Deposits</div>
+                        <div class="summary-value">
+                            {{ $currency }} {{ number_format($totalDeposits, 2) }}
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="summary-label">Total Withdrawals</div>
+                        <div class="summary-value">
+                            {{ $currency }} {{ number_format($totalWithdrawals, 2) }}
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="summary-label">Available Balance{{ $periodEndText ? ' as of ' . $periodEndText : '' }}</div>
+                        <div class="summary-value">
+                            {{ number_format($closingBalance, 2) }}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="red-border"></div>
         </div>
+
+    @else
+
+        <div class="continuation-header">
+            <table class="continuation-top">
+                <tr>
+                    <td class="continuation-logo">
+                        <img
+                            src="{{ url('public/cityb.png') }}"
+                            class="bank-logo"
+                            alt="Sample logo"
+                        >
+                    </td>
+
+                    <td class="continuation-title">
+                        Statement of Account
+                    </td>
+                </tr>
+            </table>
+
+            <table class="continuation-details">
+                <tr>
+                    <td class="continuation-name">
+                        Name : <strong class="continuation-name-value">{{ $accountName }}</strong>
+                    </td>
+
+                    <td class="continuation-account">
+                        Account No. : <strong class="continuation-name-value">{{ $accountNumber }}</strong>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
     @endif
 
+    <div class="transactions-heading">
+        <table class="transaction-heading-table">
+            <tr>
+                <td class="heading-left">
+                    <span class="heading-title">TRANSACTIONS</span><span class="heading-sep">{{ $periodText ?: 'Not specified' }}</span>
+                </td>
+
+                <td class="heading-right">
+                    Date of Generation: <strong>{{ $generationDate }}</strong><span class="heading-sep heading-sep-wide">Currency: <strong>{{ $currency }}</strong></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="transactions-table{{ $pageIndex > 0 ? ' continuation-rows' : '' }}">
+        <thead>
+            <tr>
+                <th>DATE</th>
+                <th>DESCRIPTION</th>
+                <th class="text-right">CHQ. NO.</th>
+                <th class="text-right">WITHDRAWAL</th>
+                <th class="text-right">DEPOSIT</th>
+                <th class="text-right">BALANCE</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if($pageIndex === 0)
+                <tr class="opening-row">
+                    <td></td>
+                    <td>Opening Balance</td>
+                    <td class="text-right">-</td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-right">{{ number_format($openingBalance, 2) }}</td>
+                </tr>
+            @endif
+
+            @forelse($pageTransactions as $transaction)
+                @php
+                    try {
+                        $rowDate = \Carbon\Carbon::createFromFormat('!d-m-Y', $transaction['date'] ?? '')->format('d M Y');
+                    } catch (\Throwable $e) {
+                        $rowDate = $transaction['date'] ?? '';
+                    }
+                @endphp
+                <tr>
+                    <td>{{ $rowDate }}</td>
+
+                    <td>{{ $transaction['description'] ?? '' }}</td>
+
+                    <td class="text-right">-</td>
+
+                    <td class="text-right">
+                        {{ number_format((float)($transaction['withdrawal'] ?? 0), 2) }}
+                    </td>
+
+                    <td class="text-right">
+                        {{ number_format((float)($transaction['deposit'] ?? 0), 2) }}
+                    </td>
+
+                    <td class="text-right">
+                        {{ number_format((float)($transaction['balance'] ?? 0), 2) }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="6" style="text-align:center;padding:12px;">
+                        No sample transactions found.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    @if($loop->last)
+        <table class="end-statement">
+            <tr>
+                <td class="end-line"><div class="end-rule"></div></td>
+                <td class="end-text">End of Sample Report</td>
+                <td class="end-line"><div class="end-rule"></div></td>
+            </tr>
+        </table>
+    @endif
+
+</div>
+
+@if(!$loop->last)
+    <div class="page-break"></div>
+@endif
+
 @endforeach
+
 </body>
 </html>

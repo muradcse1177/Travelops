@@ -194,133 +194,354 @@ class statemntController extends Controller
     public function cityStatementGenerate(Request $request)
     {
         $validated = $request->validate([
-            'bankBranch'     => 'required|string',
-            'branchAddress'  => 'required|string',
-            'accountName'    => 'required|string',
-            'accountAddress' => 'required|string',
-            'printDate'      => 'required|date',
-            'periodFrom'     => 'required|string',
-            'accountNumber'  => 'required|string',
-            'customerId'     => 'required|string',
-            'productName'    => 'required|string',
-            'currency'       => 'required|string',
-            'transaction'    => 'required|integer|min:1|max:500',
-            'openingBalance' => 'required|numeric|min:0',
-            'statement_type' => 'required|string|in:online,physical',
-            'routing' => 'required|string',
+            'bankBranch'      => 'required|string',
+            'branchAddress'   => 'required|string',
+            'accountName'     => 'required|string',
+            'accountAddress'  => 'required|string',
+            'printDate'       => 'required|date',
+            'periodFrom'      => 'required|string',
+            'accountNumber'   => 'required|string',
+            'customerId'      => 'required|string',
+            'productName'     => 'required|string',
+            'currency'        => 'required|string',
+            'transaction'     => 'required|integer|min:1|max:500',
+            'openingBalance'  => 'required|numeric|min:0',
+            'statement_type'  => 'required|string|in:online,physical',
+            'routing'         => 'required|string',
         ]);
 
-        // Parse date range
-        $period = explode(' - ', $validated['periodFrom']);
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Validate statement date range
+        |--------------------------------------------------------------------------
+        */
+
+        $period = explode(' - ', trim($validated['periodFrom']));
+
         if (count($period) !== 2) {
-            return back()->withErrors(['errorMessage' => 'Invalid date range format. Use: DD-MM-YYYY to DD-MM-YYYY']);
+            throw ValidationException::withMessages([
+                'periodFrom' =>
+                    'Invalid date range format. Use: DD-MM-YYYY - DD-MM-YYYY',
+            ]);
         }
 
-        $start = Carbon::createFromFormat('d-m-Y', trim($period[0]))->startOfMonth();
-        $end   = Carbon::createFromFormat('d-m-Y', trim($period[1]))->endOfMonth();
-        $months = CarbonPeriod::create($start, '1 month', $end);
-        $monthCount = iterator_count($months);
-        $perMonth = (int) floor($validated['transaction'] / $monthCount);
+        try {
+            $start = Carbon::createFromFormat(
+                '!d-m-Y',
+                trim($period[0])
+            );
 
-        $types = ['NPSB', 'CTFT', 'BFTN', 'PURCHASE', 'ATM Withdraw', 'CHARGE', 'INTEREST', 'WTAX'];
+            $end = Carbon::createFromFormat(
+                '!d-m-Y',
+                trim($period[1])
+            );
+
+            if (
+                !$start ||
+                !$end ||
+                $start->format('d-m-Y') !== trim($period[0]) ||
+                $end->format('d-m-Y') !== trim($period[1])
+            ) {
+                throw new \InvalidArgumentException('Invalid date.');
+            }
+
+            if ($start->gt($end)) {
+                throw new \InvalidArgumentException(
+                    'Start date must not be after end date.'
+                );
+            }
+
+            $start->startOfMonth();
+            $end->endOfMonth();
+
+        } catch (\Throwable $e) {
+            throw ValidationException::withMessages([
+                'periodFrom' =>
+                    'Invalid date range. Please use DD-MM-YYYY - DD-MM-YYYY.',
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Build month collection
+        |--------------------------------------------------------------------------
+        */
+
+        $months = collect(
+            CarbonPeriod::create($start, '1 month', $end)
+        );
+
+        $monthCount = $months->count();
+
+        if ($monthCount < 1) {
+            throw ValidationException::withMessages([
+                'periodFrom' => 'The selected date range is invalid.',
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. Transaction configuration
+        |--------------------------------------------------------------------------
+        */
+
+        $transactionCount = (int) $validated['transaction'];
+
+        $transactionTypes = [
+            'NPSB',
+            'CTFT',
+            'BFTN',
+            'PURCHASE',
+            'ATM Withdraw',
+            'CHARGE',
+            'INTEREST',
+            'WTAX',
+        ];
 
         $transactions = [];
-        $balance = $validated['openingBalance']; // Start from user input
+        $balance = (float) $validated['openingBalance'];
         $wtaxUsed = false;
+        $generatedCount = 0;
 
-        foreach ($months as $month) {
+        /*
+        |--------------------------------------------------------------------------
+        | 4. Generate sample transactions
+        |--------------------------------------------------------------------------
+        | The requested transaction count is distributed across months.
+        | Each generated transaction updates the running balance.
+        */
+
+        $basePerMonth = intdiv($transactionCount, $monthCount);
+        $remainder = $transactionCount % $monthCount;
+
+        foreach ($months as $monthIndex => $month) {
+            $month = $month->copy();
+
+            $monthTransactionCount = $basePerMonth
+                + ($monthIndex < $remainder ? 1 : 0);
+
             $interestUsed = false;
 
-            for ($i = 0; $i < $perMonth; $i++) {
-                $date = $month->copy()->addDays(rand(0, 27))->format('d-m-Y');
+            for ($i = 0; $i < $monthTransactionCount; $i++) {
+                $typePool = $transactionTypes;
 
-                // Filter type
-                $typePool = collect($types);
-                if ($wtaxUsed) $typePool = $typePool->reject(fn($t) => $t === 'WTAX');
-                if ($interestUsed) $typePool = $typePool->reject(fn($t) => $t === 'INTEREST');
+                if ($wtaxUsed) {
+                    $typePool = array_values(array_filter(
+                        $typePool,
+                        fn ($type) => $type !== 'WTAX'
+                    ));
+                }
 
-                $type = $typePool->random();
-                if ($type === 'WTAX') $wtaxUsed = true;
-                if ($type === 'INTEREST') $interestUsed = true;
+                if ($interestUsed) {
+                    $typePool = array_values(array_filter(
+                        $typePool,
+                        fn ($type) => $type !== 'INTEREST'
+                    ));
+                }
 
-                // Amount logic
+                if (empty($typePool)) {
+                    break;
+                }
+
+                $type = $typePool[array_rand($typePool)];
+
+                if ($type === 'WTAX') {
+                    $wtaxUsed = true;
+                }
+
+                if ($type === 'INTEREST') {
+                    $interestUsed = true;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Amount rules
+                |--------------------------------------------------------------------------
+                */
+
                 switch ($type) {
                     case 'PURCHASE':
-                        $amount = rand(500, 15000);
+                        $amount = random_int(500, 15000);
                         break;
+
                     case 'ATM Withdraw':
-                        $atmOptions = [2000, 5000, 10000, 15000, 20000, 30000];
-                        $amount = $atmOptions[array_rand($atmOptions)];
+                        $amount = [
+                            2000,
+                            5000,
+                            10000,
+                            15000,
+                            20000,
+                            30000,
+                        ][array_rand([
+                            2000,
+                            5000,
+                            10000,
+                            15000,
+                            20000,
+                            30000,
+                        ])];
                         break;
+
                     case 'CHARGE':
                     case 'INTEREST':
                     case 'WTAX':
-                        $amount = rand(1500, 3000);
+                        $amount = random_int(1500, 3000);
                         break;
+
                     case 'CTFT':
-                        $amount = round(rand(40000, 300000), -2);
+                        $amount = (float) (random_int(400, 3000) * 100);
                         break;
+
                     case 'NPSB':
-                        $amount = round(rand(10000, 100000), -2);
+                        $amount = (float) (random_int(100, 1000) * 100);
                         break;
+
                     case 'BFTN':
-                        $amount = round(rand(30000, 200000), -2);
+                        $amount = (float) (random_int(300, 2000) * 100);
                         break;
+
                     default:
-                        $amount = rand(1000, 500000);
+                        $amount = random_int(1000, 500000);
+                        break;
                 }
 
-                if (in_array($type, ['CTFT', 'NPSB', 'BFTN'])) {
-                    $isDeposit = rand(0, 1) === 1; // randomly decide deposit or withdrawal
-                } else {
-                    $isDeposit = in_array($type, ['INTEREST']);
-                }
+                /*
+                |--------------------------------------------------------------------------
+                | Transaction date
+                |--------------------------------------------------------------------------
+                */
+
+                $monthStart = $month->copy()->startOfMonth();
+                $monthEnd = $month->copy()->endOfMonth();
+
+                $date = Carbon::createFromTimestamp(
+                    random_int(
+                        $monthStart->timestamp,
+                        $monthEnd->timestamp
+                    )
+                )->format('d-m-Y');
+
+                /*
+                |--------------------------------------------------------------------------
+                | Deposit / withdrawal handling
+                |--------------------------------------------------------------------------
+                */
+
+                $isDeposit = in_array(
+                    $type,
+                    ['CTFT', 'NPSB', 'BFTN'],
+                    true
+                ) || $type === 'INTEREST';
 
                 if ($isDeposit) {
                     $balance += $amount;
+
                     $transactions[] = [
-                        'date'       => $date,
-                        'description'=> $this->generateDescription($type),
-                        'withdrawal' => null,
-                        'deposit'    => $amount,
-                        'balance'    => $balance
+                        'date'        => $date,
+                        'description' => $this->generateDescription($type),
+                        'withdrawal'  => null,
+                        'deposit'     => $amount,
+                        'balance'     => $balance,
                     ];
-                } else {
-                    // Only add withdrawal if balance allows
-                    if ($balance >= $amount) {
-                        $balance -= $amount;
-                        $transactions[] = [
-                            'date'       => $date,
-                            'description'=> $this->generateDescription($type),
-                            'withdrawal' => $amount,
-                            'deposit'    => null,
-                            'balance'    => $balance
-                        ];
-                    }
+
+                    $generatedCount++;
+                    continue;
                 }
+
+                /*
+                * Do not allow a withdrawal to make the balance negative.
+                * If the available balance is insufficient, skip this
+                * generated transaction.
+                */
+                if ($balance < $amount) {
+                    continue;
+                }
+
+                $balance -= $amount;
+
+                $transactions[] = [
+                    'date'        => $date,
+                    'description' => $this->generateDescription($type),
+                    'withdrawal'  => $amount,
+                    'deposit'     => null,
+                    'balance'     => $balance,
+                ];
+
+                $generatedCount++;
             }
         }
 
-        // Sort by date
+        /*
+        |--------------------------------------------------------------------------
+        | 5. Sort transactions chronologically
+        |--------------------------------------------------------------------------
+        */
+
         usort($transactions, function ($a, $b) {
-            return Carbon::createFromFormat('d-m-Y', $a['date']) <=> Carbon::createFromFormat('d-m-Y', $b['date']);
+            $dateA = Carbon::createFromFormat('!d-m-Y', $a['date']);
+            $dateB = Carbon::createFromFormat('!d-m-Y', $b['date']);
+
+            return $dateA->timestamp <=> $dateB->timestamp;
         });
 
+        /*
+        |--------------------------------------------------------------------------
+        | 6. Select PDF view
+        |--------------------------------------------------------------------------
+        */
 
-        $view = $validated['statement_type'] === 'online'
-            ? 'bankStatement.cityStatementPDF'
-            : 'bankStatement.cityPhysicalPDF'; // নতুন physical design view
+        if ($validated['statement_type'] === 'online') {
+            $view = 'bankStatement.cityStatementPDF';
+            $fileName = 'CityBankOnlineStatement.pdf';
+        } else {
+            $view = 'bankStatement.cityPhysicalPDF';
+            $fileName = 'CityBankPhysicalStatement.pdf';
+        }
 
-        $pdf = PDF::loadView($view, [
-            'info' => $validated,
+        /*
+        |--------------------------------------------------------------------------
+        | 7. Generate PDF
+        |--------------------------------------------------------------------------
+        */
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+            'info'         => $validated,
             'transactions' => $transactions,
         ])->setPaper('A4', 'portrait');
 
-        $fileName = $validated['statement_type'] === 'online'
-            ? 'CityBankOnlineStatement.pdf'
-            : 'CityBankPhysicalStatement.pdf';
+        // Physical statement: "Page X of Y" at the bottom-right of the shared footer
+        if ($view === 'bankStatement.cityPhysicalPDF') {
+            $pdf->render();
 
-        return $pdf->download($fileName);
+            $pdf->getDomPDF()->getCanvas()->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) {
+                $regular = $fontMetrics->getFont('Helvetica');
+                $size    = 7.5;
+                $grey    = [0.47, 0.47, 0.47];
+
+                $parts = [
+                    ['Page ', $regular, $grey],
+                    [(string) $pageNumber, $regular, $grey],
+                    [' of ', $regular, $grey],
+                    [(string) $pageCount, $regular, $grey],
+                ];
+
+                $width = 0;
+                foreach ($parts as [$text, $font]) {
+                    $width += $fontMetrics->getTextWidth($text, $font, $size);
+                }
+
+                // Right edge = page width minus the 8mm side margin
+                $x = $canvas->get_width() - 22.7 - $width;
+                $y = $canvas->get_height() - 18;
+
+                foreach ($parts as [$text, $font, $color]) {
+                    $canvas->text($x, $y, $text, $font, $size, $color);
+                    $x += $fontMetrics->getTextWidth($text, $font, $size);
+                }
+            });
+        }
+
+        return $pdf->stream($fileName);
     }
 
     private function generateDescription($type = null)

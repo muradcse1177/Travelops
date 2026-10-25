@@ -7,6 +7,7 @@
     "require": {
         "php": "^7.3|^8.0",
         "barryvdh/laravel-dompdf": "^2.0",
+        "chillerlan/php-qrcode": "4.3",
         "chrome-php/chrome": "^1.14",
         "fruitcake/laravel-cors": "^2.0",
         "geoip2/geoip2": "^3.3",
