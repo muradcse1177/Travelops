@@ -818,7 +818,7 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
                         <tr>
                             <td class="qr-cell" width="92">
                                 @php
-                                    $stmtRefNo = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 13));
+                                    $stmtRefNo = $stmtRefNo ?? strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 13));
                                     $stmtVerifyUrl = 'https://webrouting.tripdeigner.com/qr-statement/verify?' . http_build_query([
                                         'reference_no' => $stmtRefNo,
                                         'acc_no'       => $accountNumber,

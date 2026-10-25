@@ -456,11 +456,23 @@ class statemntController extends Controller
             $pdfSideTrim = 10;
         }
 
+        // Physical statement: fresh verification reference (QR + "Ref No"), saved to bsv
+        $stmtRefNo = null;
+        if ($view === 'bankStatement.cityPhysicalPDF') {
+            $stmtRefNo = $this->saveStatementVerification(
+                $validated,
+                $start,
+                $end,
+                $transactions ? (float) end($transactions)['balance'] : (float) $validated['openingBalance']
+            );
+        }
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOption('dpi', 96 / $pdfScale)->loadView($view, [
             'info'         => $validated,
             'transactions' => $transactions,
             'pdfScale'     => $pdfScale,
             'pdfSideTrim'  => $pdfSideTrim,
+            'stmtRefNo'    => $stmtRefNo,
         ])->setPaper('A4', 'portrait');
 
         // Physical statement: "Page X of Y" at the bottom-right of the shared footer
@@ -499,6 +511,37 @@ class statemntController extends Controller
         }
 
         return $pdf->stream($fileName);
+    }
+
+    /**
+     * Store the statement summary in bsv under a new unique 13-char
+     * reference code (A-Z, 0-9) and return that code.
+     */
+    private function saveStatementVerification(array $info, Carbon $start, Carbon $end, float $closingBalance): string
+    {
+        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+        do {
+            $code = '';
+            for ($i = 0; $i < 13; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (DB::table('bsv')->where('code', $code)->exists());
+
+        DB::table('bsv')->insert([
+            'code'            => $code,
+            'account_number'  => trim($info['accountNumber']),
+            'account_name'    => trim($info['accountName']),
+            'period_from'     => $start->toDateString(),
+            'period_to'       => $end->toDateString(),
+            'opening_balance' => round((float) $info['openingBalance'], 2),
+            'closing_balance' => round($closingBalance, 2),
+            'generation_date' => Carbon::parse($info['printDate'])->toDateString(),
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        return $code;
     }
 
     /**
