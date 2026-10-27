@@ -579,7 +579,7 @@ table {
 /* "Page X of Y" under the overseas number (X = DomPDF page counter, Y = $totalPages) */
 .statement-footer .footer-page {
     margin-top: 5px;
-    font-size: 9px;
+    font-size: 11px;
     color: #777;
 }
 
