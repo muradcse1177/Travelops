@@ -17,10 +17,12 @@
     // + 40px so the footer (fixed to this margin) keeps 40px blank below it
     $marginBottom = round(297 - 293 * $pdfScale + 40 * 25.4 / 96, 3);
 
-    // Page 1: each extra address line (~85 chars, 13px) is taken back from the
-    // 23 rows' padding so they still end 35px above the footer's red line
+    // Page 1: the header grows with the taller of its two sides - each extra
+    // address line (~85 chars, 13px) on the left, or the verify block on the
+    // right (~7.6px taller than a one-line address side). That height is taken
+    // back from the 23 rows' padding so they still end 35px above the red line.
     $addressExtraLines = max(0, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 85) - 1);
-    $firstRowPadding = round(max(4, 7.171 - 13 / 46 * $addressExtraLines), 3);
+    $firstRowPadding = round(max(4, 7.171 - max(7.6, 13 * $addressExtraLines) / 46), 3);
 @endphp
 @page {
     size: A4 portrait;
@@ -879,6 +881,7 @@ URL below
                                     http://t.cbl.fyi/i/{{ random_int(10, 99) }}/stmt
                                 </div>
 
+                                <br>
                                 <div class="sample-watermark">
                                     {{ $stmtRefNo }}
                                 </div>
