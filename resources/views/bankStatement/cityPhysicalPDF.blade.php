@@ -587,12 +587,6 @@ table {
     content: counter(page);
 }
 
-.footer-page-no,
-.footer-page-count {
-    font-weight: bold;
-    color: #222;
-}
-
 /* Overseas column: the page number takes the separator's bottom padding */
 .statement-footer td.footer-overseas .footer-sep {
     padding-bottom: 0;
