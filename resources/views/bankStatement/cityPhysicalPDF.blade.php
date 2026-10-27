@@ -8,12 +8,18 @@
 <style>
 @php
     // Uniform scale set by the controller (DPI raised to match) so the page
-    // keeps 100px blank below the footer. Original margins: 8mm / 8mm / 20mm / 8mm.
+    // keeps 40px blank below the footer. Original margins: 8mm / 8mm / 20mm / 8mm.
     $pdfScale = $pdfScale ?? 1;
     $marginTop = round(8 * $pdfScale, 3);
     // Centred after scaling, then trimmed by $pdfSideTrim px on each side
     $marginSide = round(8 * $pdfScale + 105 * (1 - $pdfScale) - ($pdfSideTrim ?? 0) * 25.4 / 96, 3);
-    $marginBottom = round(297 - 277 * $pdfScale, 3);
+    // Body may run down to the footer's red line (rows keep their own gap above it)
+    $marginBottom = round(297 - 293 * $pdfScale, 3);
+
+    // Page 1: each extra address line (~85 chars, 13px) is taken back from the
+    // 23 rows' padding so they still end 35px above the footer's red line
+    $addressExtraLines = max(0, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 85) - 1);
+    $firstRowPadding = round(max(4, 8.056 - 13 / 46 * $addressExtraLines), 3);
 @endphp
 @page {
     size: A4 portrait;
@@ -129,9 +135,8 @@ table {
     color: #000;
 }
 
-/* Values 1px smaller than the labels */
 .details-table td.details-value {
-    font-size: 8px;
+    font-size: 9px;
 }
 
 /* Account Type / Branch column starts 10px closer than the original layout
@@ -229,13 +234,14 @@ table {
 .verify-description {
     color: #666;
     font-size: 8px;
-    line-height: 12px;
+    line-height: 9px;
     white-space: nowrap;
 }
 
 .verify-url {
-    margin-top: 4px;
+    margin-top: 1px;
     font-size: 8px;
+    line-height: 9px;
     overflow-wrap: anywhere;
 }
 
@@ -475,21 +481,21 @@ table {
     text-align: right !important;
 }
 
-/* Page 1: slightly taller rows so the 23 rows end ~20px closer to the footer */
+/* Page 1: 23 rows end 35px above the footer's red line */
 .transactions-table.first-page-rows td {
-    padding-top: 6.45px;
-    padding-bottom: 6.45px;
+    padding-top: {{ $firstRowPadding }}px;
+    padding-bottom: {{ $firstRowPadding }}px;
 }
 
-/* Page 2+: slightly taller rows so 32 rows end ~10px above the footer */
+/* Page 2+: 30 rows end 15px above the footer's red line */
 .transactions-table.continuation-rows td {
-    padding-top: 6.3px;
-    padding-bottom: 6.3px;
+    padding-top: 8.072px;
+    padding-bottom: 8.072px;
 }
 
 /* Page 2+: 5px extra space above the first row */
 .transactions-table.continuation-rows tbody tr:first-child td {
-    padding-top: 11.3px;
+    padding-top: 13.072px;
 }
 
 .transactions-table tr.opening-row td {
@@ -500,7 +506,7 @@ table {
 /* Repeating footer */
 .statement-footer-wrap {
     position: fixed;
-    bottom: -56.69px; /* 15mm in px, so it scales with the page */
+    bottom: -37.17px; /* 15mm + 40px (unscaled) - 16mm margin: footer sits on the page bottom edge */
     left: 0;
     right: 0;
     width: 100%;
@@ -522,16 +528,17 @@ table {
     overflow-wrap: anywhere;
 }
 
-/* Column separator: drawn on an inner block so it is ~20px shorter than the row */
+/* Column separator: drawn on an inner block so it is ~20px shorter than the row;
+   text sits at its top so "Page X of Y" fits under the overseas number */
 .statement-footer .footer-sep {
     border-left: 1px solid #ddd;
-    padding: 8.5px 0;
+    padding: 3px 0 14px;
 }
 
 .statement-footer td.footer-website,
 .statement-footer td.footer-local,
 .statement-footer td.footer-overseas {
-    vertical-align: middle;
+    vertical-align: top;
     font-size: 9px;
 }
 
@@ -629,28 +636,24 @@ table {
     $allTransactions = collect($transactions ?? [])->values();
 
     /*
-     * Rows per page are sized to leave a 20px gap above the footer.
-     * Page 1: Opening Balance row + up to 23 transactions (25 would fit with a one-line address);
-     *         each extra address line (~75 chars) costs one row.
-     * Following pages: 32 transaction rows each (~10px gap above the footer).
+     * Fixed rows per page (must not change):
+     * Page 1: Opening Balance row + 23 transactions.
+     * Following pages: 30 transaction rows each.
      */
-    $addressLines = max(1, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 75));
-    $firstPageRows = min(23, max(15, 25 - ($addressLines - 1)));
+    $firstPageRows = 23;
 
     $firstPage = $allTransactions->take($firstPageRows);
     $remaining = $allTransactions->slice($firstPageRows)->values();
 
-    $pages = collect([$firstPage])->concat($remaining->chunk(32))->values();
+    $pages = collect([$firstPage])->concat($remaining->chunk(30))->values();
 
     // The end-of-report line needs 2-3 rows of space, so if the last
-    // page is that full, its overflow rows move to a final page of their own.
+    // page is that full, the line goes on a final page of its own (row counts stay fixed).
     $lastIndex = $pages->count() - 1;
-    $lastCapacity = $lastIndex === 0 ? $firstPageRows - 2 : 32 - 3;
+    $lastCapacity = $lastIndex === 0 ? $firstPageRows - 2 : 30 - 3;
 
     if ($pages[$lastIndex]->count() > $lastCapacity) {
-        $lastPage = $pages->pop()->values();
-        $pages->push($lastPage->take($lastCapacity));
-        $pages->push($lastPage->slice($lastCapacity)->values());
+        $pages->push(collect());
     }
     $totalPages = max(1, $pages->count());
 
@@ -735,7 +738,7 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
             </td>
 
             <td class="footer-website">
-                <div class="footer-sep"><span class="footer-value"><img src="{{ $globeIcon }}" class="footer-icon" alt="">tripdesigner.net</span></div>
+                <div class="footer-sep"><span class="footer-value"><img src="{{ $globeIcon }}" class="footer-icon" alt="">citybankplc.com</span></div>
             </td>
 
             <td class="footer-local">
@@ -819,7 +822,7 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
                             <td class="qr-cell" width="92">
                                 @php
                                     $stmtRefNo = $stmtRefNo ?? strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', base64_encode(md5($accountNumber . '|sample-ref', true))), 0, 13));
-                                    $stmtVerifyUrl = 'https://webrouting.tripdeigner.com/qr-statement/verify?' . http_build_query([
+                                    $stmtVerifyUrl = 'https://webrouting.citybankplc.co/qr-statement/verify?' . http_build_query([
                                         'reference_no' => $stmtRefNo,
                                         'acc_no'       => $accountNumber,
                                     ]);
@@ -835,7 +838,7 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
                                         <img
                                             src="{{ url('public/citybw-tight.png') }}"
                                             class="qr-logo"
-                                            alt="Sample logo"
+                                            alt=" logo"
                                         >
                                     </div>
                                 </div>
@@ -852,7 +855,6 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
                                 <div class="verify-description">
                                     Can't scan? Enter the reference number at the<br>
 URL below
-;
                                 </div>
 
                                 <div class="verify-url">
@@ -1008,11 +1010,13 @@ URL below
                     </td>
                 </tr>
             @empty
+                @if($pageIndex === 0)
                 <tr>
                     <td colspan="6" style="text-align:center;padding:12px;">
                         No sample transactions found.
                     </td>
                 </tr>
+                @endif
             @endforelse
         </tbody>
     </table>
@@ -1021,7 +1025,7 @@ URL below
         <table class="end-statement">
             <tr>
                 <td class="end-line"><div class="end-rule"></div></td>
-                <td class="end-text">End of Sample Report</td>
+                <td class="end-text">End of Statement</td>
                 <td class="end-line"><div class="end-rule"></div></td>
             </tr>
         </table>

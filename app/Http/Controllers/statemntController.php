@@ -443,16 +443,16 @@ class statemntController extends Controller
 
         /*
          * Physical statement: the whole design is scaled down uniformly (same
-         * ratio, centred) so every page keeps 100px blank below the footer.
+         * ratio, centred) so every page keeps 40px blank below the footer.
          * The original layout ends 5mm above the bottom edge (footer bottom at
          * 292mm from the top); scaled from the top edge it must end at
-         * 297mm - 100px. A higher DPI shrinks every px size by that factor.
+         * 297mm - 40px. A higher DPI shrinks every px size by that factor.
          */
         $pdfScale = 1;
         // Left/right margins are then trimmed by this many px (content widens)
         $pdfSideTrim = 0;
         if ($view === 'bankStatement.cityPhysicalPDF') {
-            $pdfScale = (297 - 100 * 25.4 / 96) / 292;
+            $pdfScale = (297 - 40 * 25.4 / 96) / 292;
             $pdfSideTrim = 10;
         }
 
@@ -496,12 +496,12 @@ class statemntController extends Controller
                     $width += $fontMetrics->getTextWidth($text, $font, $size);
                 }
 
-                // Original spot (8mm side margin, 18pt above the bottom),
-                // scaled with the page: horizontally about the centre, vertically from the top;
+                // Original spot (8mm side margin), scaled with the page about the centre,
                 // then moved out with the trimmed right margin (px -> pt)
                 $pageWidth = $canvas->get_width();
                 $x = $pageWidth / 2 + ($pageWidth / 2 - 22.7) * $pdfScale + $pdfSideTrim * 0.75 - $width;
-                $y = ($canvas->get_height() - 18) * $pdfScale;
+                // Under the "+880 2 8331040 (Overseas)" line (footer sits on the page bottom edge)
+                $y = $canvas->get_height() - 13.2;
 
                 foreach ($parts as [$text, $font, $color]) {
                     $canvas->text($x, $y, $text, $font, $size, $color);
