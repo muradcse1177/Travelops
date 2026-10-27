@@ -13,13 +13,14 @@
     $marginTop = round(8 * $pdfScale, 3);
     // Centred after scaling, then trimmed by $pdfSideTrim px on each side
     $marginSide = round(8 * $pdfScale + 105 * (1 - $pdfScale) - ($pdfSideTrim ?? 0) * 25.4 / 96, 3);
-    // Body may run down to the footer's red line (rows keep their own gap above it)
-    $marginBottom = round(297 - 293 * $pdfScale, 3);
+    // Body may run down to the footer's red line (rows keep their own gap above it);
+    // + 40px so the footer (fixed to this margin) keeps 40px blank below it
+    $marginBottom = round(297 - 293 * $pdfScale + 40 * 25.4 / 96, 3);
 
     // Page 1: each extra address line (~85 chars, 13px) is taken back from the
     // 23 rows' padding so they still end 35px above the footer's red line
     $addressExtraLines = max(0, (int) ceil(mb_strlen(trim($info['accountAddress'] ?? '')) / 85) - 1);
-    $firstRowPadding = round(max(4, 8.056 - 13 / 46 * $addressExtraLines), 3);
+    $firstRowPadding = round(max(4, 7.171 - 13 / 46 * $addressExtraLines), 3);
 @endphp
 @page {
     size: A4 portrait;
@@ -489,13 +490,13 @@ table {
 
 /* Page 2+: 30 rows end 15px above the footer's red line */
 .transactions-table.continuation-rows td {
-    padding-top: 8.072px;
-    padding-bottom: 8.072px;
+    padding-top: 7.393px;
+    padding-bottom: 7.393px;
 }
 
 /* Page 2+: 5px extra space above the first row */
 .transactions-table.continuation-rows tbody tr:first-child td {
-    padding-top: 13.072px;
+    padding-top: 12.393px;
 }
 
 .transactions-table tr.opening-row td {
@@ -506,7 +507,7 @@ table {
 /* Repeating footer */
 .statement-footer-wrap {
     position: fixed;
-    bottom: -37.17px; /* 15mm + 40px (unscaled) - 16mm margin: footer sits on the page bottom edge */
+    bottom: -37.17px; /* footer bottom 40px above the page bottom edge (see $marginBottom) */
     left: 0;
     right: 0;
     width: 100%;
