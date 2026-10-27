@@ -475,41 +475,7 @@ class statemntController extends Controller
             'stmtRefNo'    => $stmtRefNo,
         ])->setPaper('A4', 'portrait');
 
-        // Physical statement: "Page X of Y" at the bottom-right of the shared footer
-        if ($view === 'bankStatement.cityPhysicalPDF') {
-            $pdf->render();
-
-            $pdf->getDomPDF()->getCanvas()->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($pdfScale, $pdfSideTrim) {
-                $regular = $fontMetrics->getFont('Helvetica');
-                $size    = 7.5 * $pdfScale;
-                $grey    = [0.47, 0.47, 0.47];
-
-                $parts = [
-                    ['Page ', $regular, $grey],
-                    [(string) $pageNumber, $regular, $grey],
-                    [' of ', $regular, $grey],
-                    [(string) $pageCount, $regular, $grey],
-                ];
-
-                $width = 0;
-                foreach ($parts as [$text, $font]) {
-                    $width += $fontMetrics->getTextWidth($text, $font, $size);
-                }
-
-                // Original spot (8mm side margin), scaled with the page about the centre,
-                // then moved out with the trimmed right margin (px -> pt)
-                $pageWidth = $canvas->get_width();
-                $x = $pageWidth / 2 + ($pageWidth / 2 - 22.7) * $pdfScale + $pdfSideTrim * 0.75 - $width;
-                // Under the "+880 2 8331040 (Overseas)" line (footer sits on the page bottom edge)
-                $y = $canvas->get_height() - 13.2;
-
-                foreach ($parts as [$text, $font, $color]) {
-                    $canvas->text($x, $y, $text, $font, $size, $color);
-                    $x += $fontMetrics->getTextWidth($text, $font, $size);
-                }
-            });
-        }
-
+        // "Page X of Y" is part of the footer HTML in the view
         return $pdf->stream($fileName);
     }
 

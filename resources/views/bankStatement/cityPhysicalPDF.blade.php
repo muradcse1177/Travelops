@@ -529,7 +529,7 @@ table {
 }
 
 /* Column separator: drawn on an inner block so it is ~20px shorter than the row;
-   text sits at its top so "Page X of Y" fits under the overseas number */
+   text sits at its top */
 .statement-footer .footer-sep {
     border-left: 1px solid #ddd;
     padding: 3px 0 14px;
@@ -574,6 +574,28 @@ table {
     width: 20.59%;
     white-space: nowrap;
     text-align: center;
+}
+
+/* "Page X of Y" under the overseas number (X = DomPDF page counter, Y = $totalPages) */
+.statement-footer .footer-page {
+    margin-top: 5px;
+    font-size: 9px;
+    color: #777;
+}
+
+.footer-page-no:after {
+    content: counter(page);
+}
+
+.footer-page-no,
+.footer-page-count {
+    font-weight: bold;
+    color: #222;
+}
+
+/* Overseas column: the page number takes the separator's bottom padding */
+.statement-footer td.footer-overseas .footer-sep {
+    padding-bottom: 0;
 }
 
 /* Overseas number flush with the right margin */
@@ -747,8 +769,9 @@ within 14 days of receipt of this statement (if any), otherwise, this statement 
             </td>
 
             <td class="footer-overseas">
-                <div class="footer-sep"><span class="footer-value"><img src="{{ $headsetIcon }}" class="footer-icon" alt="">+880 2 8331040</span>
-                (Overseas)</div>
+                <div class="footer-sep"><span class="footer-value">+880 2 8331040</span>
+                (Overseas)
+                <div class="footer-page">Page <span class="footer-page-no"></span> of <span class="footer-page-count">{{ $totalPages }}</span></div></div>
             </td>
         </tr>
     </table>
