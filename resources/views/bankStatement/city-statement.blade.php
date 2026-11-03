@@ -65,12 +65,12 @@
 
                                     <div class="form-group col-sm-3">
                                         <label for="printDate">Print Date</label>
-                                        <input type="date" class="form-control" id="printDate" name="printDate">
+                                        <input type="text" class="form-control" id="printDate" name="printDate" placeholder="Select date" readonly>
                                     </div>
 
                                     <div class="form-group col-sm-3">
                                         <label for="periodFrom">Period From (Date Range)</label>
-                                        <input type="text" class="form-control" id="periodFrom" name="periodFrom" placeholder="e.g. 01-01-2025 to 14-07-2025">
+                                        <input type="text" class="form-control" id="periodFrom" name="periodFrom" placeholder="e.g. 01-01-2025 - 14-07-2025" readonly>
                                     </div>
 
                                     <div class="form-group col-sm-3">
@@ -127,13 +127,35 @@
     </div>
 @endsection
 @section('js')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+    <style>.flatpickr-input { background:#fff !important; }</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
     <script>
         $(function () {
-            $('#periodFrom').daterangepicker({
-                locale: {
-                    format: 'DD-MM-YYYY'
-                },
-                opens: 'left'
+            var endOfToday = new Date();
+            endOfToday.setHours(23, 59, 59, 999);
+
+            flatpickr('#printDate', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd-m-Y',
+                maxDate: new Date(),
+                disable: [function (d) { return d > endOfToday; }]
+            });
+
+            // Sent as "DD-MM-YYYY - DD-MM-YYYY", the format the controller parses
+            flatpickr('#periodFrom', {
+                mode: 'range',
+                dateFormat: 'd-m-Y',
+                locale: { rangeSeparator: ' - ' },
+                maxDate: new Date(),
+                disable: [function (d) { return d > endOfToday; }],
+                onClose: function (s, str, fp) {
+                    // One click = one-day period
+                    if (s.length === 1) {
+                        fp.setDate([s[0], s[0]], true);
+                    }
+                }
             });
         });
     </script>
