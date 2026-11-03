@@ -135,6 +135,25 @@
             var endOfToday = new Date();
             endOfToday.setHours(23, 59, 59, 999);
 
+            // Keep every input after the PDF opens and the user comes back
+            var $form = $('#printDate').closest('form');
+            var storeKey = 'cityStatementForm';
+            var saved = {};
+            try { saved = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch (e) {}
+            $form.find('input[name], textarea[name]').not('[name=_token]').each(function () {
+                if (saved[this.name] !== undefined && saved[this.name] !== '') {
+                    this.value = saved[this.name];
+                }
+            });
+            function saveForm() {
+                var data = {};
+                $form.find('input[name], textarea[name]').not('[name=_token]').each(function () {
+                    data[this.name] = this.value;
+                });
+                try { localStorage.setItem(storeKey, JSON.stringify(data)); } catch (e) {}
+            }
+            $form.on('input change submit', saveForm);
+
             flatpickr('#printDate', {
                 dateFormat: 'Y-m-d',
                 altInput: true,
