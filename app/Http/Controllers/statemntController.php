@@ -385,6 +385,30 @@ class statemntController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | 4b. Big amounts over the whole period
+        |--------------------------------------------------------------------------
+        | 1 row of 2-3 lakh, 3-6 rows of 1.5-2 lakh, 8-12 rows of 1-1.5 lakh,
+        | on random rows of types that can carry them (deposits or CT-FT, so
+        | the balance check never swaps them out). Every other row stays
+        | under 1 lakh.
+        */
+
+        $bigTypes = ['CTFT', 'NPSB', 'BFTN', 'INTER BRANCH', 'RTGS', 'CASH DEPOSIT'];
+        $bigRows = array_keys(array_filter($rows, fn ($row) => in_array($row['type'], $bigTypes, true)));
+        shuffle($bigRows);
+
+        $bands = array_merge(
+            [[2000, 2999]],
+            array_fill(0, random_int(3, 6), [1500, 1999]),
+            array_fill(0, random_int(8, 12), [1000, 1499])
+        );
+
+        foreach (array_slice($bands, 0, count($bigRows)) as $i => [$min, $max]) {
+            $rows[$bigRows[$i]]['amount'] = random_int($min, $max) * 100;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | 5. Build the transactions in date order (running balance)
         |--------------------------------------------------------------------------
         */
@@ -392,7 +416,7 @@ class statemntController extends Controller
         foreach ($rows as $row) {
             $type = $row['type'];
             $date = $row['date'];
-            $amount = $row['amount'] ?? $this->sampleAmount($type);
+            $amount = $row['amount'] ?? $this->sampleAmountBelowLakh($type);
 
             // CT-FT goes both ways; the rest by type
             $isDeposit = $type === 'CTFT' ? (bool) random_int(0, 1) : in_array($type, $depositTypes, true);
@@ -405,7 +429,7 @@ class statemntController extends Controller
                     $amount = round($balance * 0.10, 2);
                 } else {
                     $type = $fallbackDeposits[array_rand($fallbackDeposits)];
-                    $amount = $this->sampleAmount($type);
+                    $amount = $this->sampleAmountBelowLakh($type);
                     $isDeposit = true;
                 }
             }
@@ -635,7 +659,8 @@ class statemntController extends Controller
 
             case 'BKASH':
             case 'NAGAD':
-                return random_int(50, 5000) * 10;
+                // Kept under 50k
+                return random_int(50, 4999) * 10;
 
             case 'INTER BRANCH':
             case 'RTGS':
@@ -650,6 +675,16 @@ class statemntController extends Controller
             default:
                 return random_int(1000, 500000);
         }
+    }
+
+    // Sample amount kept under 1 lakh (big amounts are placed separately)
+    private function sampleAmountBelowLakh(string $type): float
+    {
+        do {
+            $amount = $this->sampleAmount($type);
+        } while ($amount >= 100000);
+
+        return $amount;
     }
 
     private function generateDescription($type = null, ?Carbon $date = null)
